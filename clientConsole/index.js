@@ -1,6 +1,6 @@
 const readline = require('readline')
 const mqtt = require('mqtt')
-const {setRoomAction, setUsernameAction, resetLocalAction} = require('./actions/actionsLocal')
+const {setRoomAction, setUsernameAction, resetLocalAction, addMessageAction} = require('./actions/actionsLocal')
 const {addUserAction, removeUserAction, resetOnlineAction} = require('./actions/actionsOnline')
 
 const arguments = process.argv.slice(2)
@@ -46,7 +46,16 @@ const render = () => {
                 : (user1.username < user2.username ? -1
                     : 0)
         )
-        all.forEach(user => console.log(user.username))
+        const [allSpectating, allPlaying] = all.reduce(
+            (accumulator, user) => !user.playing ? [[...accumulator[0], user], accumulator[1]] : [accumulator[0], [...accumulator[1], user]], [[], []]
+        )
+        console.log("Spectating:")
+        allSpectating.forEach(user => console.log(`  ${user.username}`))
+        console.log("Playing:")
+        allPlaying.forEach(user => console.log(`  ${user.username}`))
+        console.log()
+        console.log("Messages:")
+        local.messages.slice(-5).forEach(message => console.log(`  /${message.username}/ ${message.text}`))
     }
     if(local.username!=='' || room!=='') {
         console.log()
@@ -97,10 +106,11 @@ start()
 
 client.on('message', (topic, message) => {
     const topicSplit = topic.split('/')
+    const username = store.getState().reducerLocal.username
 
     if(topicSplit[1] === 'join'){
         const user = topicSplit[3]
-        if(user !== store.getState().reducerLocal.username) {
+        if(user !== username) {
             store.dispatch(addUserAction(JSON.parse(message).user))
             client.publish(topic.replace('join', 'info'), JSON.stringify({user: getDataForPublish(store.getState().reducerLocal)}))
         }
@@ -111,6 +121,12 @@ client.on('message', (topic, message) => {
     } else if(topicSplit[1]==='leave') {
         const user = topicSplit[3]
         store.dispatch(removeUserAction(user))
+
+    } else if(topicSplit[1]==='message') {
+        const user = topicSplit[3]
+        if(user !== username) {
+            store.dispatch(addMessageAction(user, JSON.parse(message).message))
+        }
     }
 })
 
@@ -126,13 +142,14 @@ rl.on('line', input => {
 
     } else if(input==='/exit' && room !== '') {
         client.unsubscribe(getTopics(room, username))
-        client.publish(`${topicPrefix}/leave/${room}/${username}`, '{}')
         store.dispatch(resetOnlineAction())
         store.dispatch(resetLocalAction())
+        client.publish(`${topicPrefix}/leave/${room}/${username}`, '{}')
 
     } else if(input==='/join' && room===''){
         joinRoom()
     } else if(input[0]!=='/' && room!==''){
+        store.dispatch(addMessageAction(username, input))
         client.publish(`${topicPrefix}/message/${room}/${username}`, JSON.stringify({message: input}))
     } else {
         render()

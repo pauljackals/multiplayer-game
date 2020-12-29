@@ -1,4 +1,4 @@
-const {SET_ROOM, SET_USERNAME, RESET_LOCAL} = require('../types/typesLocal')
+const {SET_ROOM, SET_USERNAME, RESET_LOCAL, ADD_MESSAGE} = require('../types/typesLocal')
 
 const generateBoard = side => Array(side).fill([])
     .map(() => Array(side).fill({}));
@@ -9,7 +9,8 @@ const INITIAL_STATE = {
     tank: {},
     score: 0,
     username: '',
-    room: ''
+    room: '',
+    messages: []
 }
 
 const reducerLocal = (state=INITIAL_STATE, action) => {
@@ -20,6 +21,8 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
             return {...state, username: action.payload.username}
         } case RESET_LOCAL: {
             return {...INITIAL_STATE, username: state.username}
+        } case ADD_MESSAGE: {
+            return {...state, messages: [...state.messages, action.payload.message]}
         } default: {
             return state
         }

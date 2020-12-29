@@ -1,4 +1,4 @@
-const {SET_ROOM, SET_USERNAME, RESET_LOCAL} = require('../types/typesLocal')
+const {SET_ROOM, SET_USERNAME, RESET_LOCAL, ADD_MESSAGE} = require('../types/typesLocal')
 
 const setRoomAction = (room) => {
     return {type: SET_ROOM, payload: {room}}
@@ -9,4 +9,7 @@ const setUsernameAction = (username) => {
 const resetLocalAction = () => {
     return {type: RESET_LOCAL}
 }
-module.exports={setRoomAction, setUsernameAction, resetLocalAction}
+const addMessageAction = (username, text) => {
+    return {type: ADD_MESSAGE, payload: {message: {username, text}}}
+}
+module.exports={setRoomAction, setUsernameAction, resetLocalAction, addMessageAction}
