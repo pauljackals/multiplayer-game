@@ -133,7 +133,7 @@ rl.on('line', input => {
     } else if(input==='/join' && room===''){
         joinRoom()
     } else if(input[0]!=='/' && room!==''){
-        client.publish(`${topicPrefix}/leave/${room}/${username}`, JSON.stringify({message: input}))
+        client.publish(`${topicPrefix}/message/${room}/${username}`, JSON.stringify({message: input}))
     } else {
         render()
     }
