@@ -1,7 +1,7 @@
 const readline = require('readline')
 const mqtt = require('mqtt')
-const {setRoomAction, setUsernameAction, resetLocalAction, addMessageAction} = require('./actions/actionsLocal')
-const {addUserAction, removeUserAction, resetOnlineAction} = require('./actions/actionsOnline')
+const {setRoomAction, setUsernameAction, resetLocalAction, addMessageAction, setJoiningAction, setPlayingLocal} = require('./actions/actionsLocal')
+const {addUserAction, removeUserAction, resetOnlineAction, setPlayingOnline} = require('./actions/actionsOnline')
 
 const arguments = process.argv.slice(2)
 if (arguments.length !== 1){
@@ -14,6 +14,7 @@ const hostAddress = arguments[0]
 const client = mqtt.connect(`mqtt://${hostAddress}`)
 
 client.on('error', error => {
+    console.clear()
     console.log(`Can't connect to ${error.address}`)
     client.end()
     process.exit()
@@ -56,13 +57,29 @@ const render = () => {
         console.log()
         console.log("Messages:")
         local.messages.slice(-5).forEach(message => console.log(`  /${message.username}/ ${message.text}`))
+
+        console.log()
+        console.log(local.board[0].reduce((accumulator, value, index) => `${accumulator}${index}`, ''))
+        const horizontalLine = local.board[0].reduce((accumulator) => `${accumulator}-`, '')
+        console.log(`${horizontalLine}\\`)
+        local.board.forEach((row, index) => {
+            const rowString = row.reduce((accumulator, field) => {
+                if(field.tank){
+                    return `${accumulator}X`
+                } else {
+                    return `${accumulator} `
+                }
+            }, '')
+            console.log(`${rowString}|${index}`)
+        })
+        console.log(`${horizontalLine}/`)
     }
     if(local.username!=='' || room!=='') {
         console.log()
     }
 }
 
-const getDataForPublish = (user) => ({
+const getDataForPublish = user => ({
     username: user.username,
     playing: user.playing
 })
@@ -71,13 +88,13 @@ const askQuestion = async questionString => new Promise(resolve => {
     rl.question(questionString, resolve)
 })
 
-const getTopics = (room, username) => [
-    `${topicPrefix}/action/${room}/#`,
-    `${topicPrefix}/message/${room}/#`,
-    `${topicPrefix}/info/${room}/${username}`,
-    `${topicPrefix}/join/${room}/#`,
-    `${topicPrefix}/leave/${room}/#`
-]
+// const getTopics = (room, username) => [
+//     `${topicPrefix}/action/${room}/#`,
+//     `${topicPrefix}/message/${room}/#`,
+//     `${topicPrefix}/info/${room}/${username}`,
+//     `${topicPrefix}/join/${room}/#`,
+//     `${topicPrefix}/leave/${room}/#`
+// ]
 
 const joinRoom = async () => {
     render()
@@ -85,10 +102,12 @@ const joinRoom = async () => {
     const room = await askQuestion("Type room: ")
     store.dispatch(setRoomAction(room))
 
-    client.subscribe(getTopics(room, username), () => {
+    client.subscribe(`${topicPrefix}/+/${room}/#`, () => {
+    // client.subscribe(getTopics(room, username), () => {
         client.publish(`${topicPrefix}/join/${room}/${username}`, JSON.stringify({user: getDataForPublish(store.getState().reducerLocal)}), () => {
                 setTimeout(() => {
-                    client.unsubscribe(`${topicPrefix}/info/${room}/${username}`)
+                    // client.unsubscribe(`${topicPrefix}/info/${room}/${username}`)
+                    store.dispatch(setJoiningAction(false))
                 }, 1000)
             }
         )
@@ -116,7 +135,10 @@ client.on('message', (topic, message) => {
         }
 
     } else if(topicSplit[1]==='info') {
-        store.dispatch(addUserAction(JSON.parse(message).user))
+        const user = topicSplit[3]
+        if(user === username) {
+            store.dispatch(addUserAction(JSON.parse(message).user))
+        }
 
     } else if(topicSplit[1]==='leave') {
         const user = topicSplit[3]
@@ -127,30 +149,50 @@ client.on('message', (topic, message) => {
         if(user !== username) {
             store.dispatch(addMessageAction(user, JSON.parse(message).message))
         }
+    } else if(topicSplit[1]==='play') {
+        const user = topicSplit[3]
+        if(user !== username) {
+            store.dispatch(setPlayingOnline(true, user))
+        }
     }
 })
 
 rl.on('line', input => {
-    const room = store.getState().reducerLocal.room
-    const username = store.getState().reducerLocal.username
-    if(input==='/exit' && room === ''){
-        rl.close()
-        client.end()
-        console.clear()
-        console.log("Stopping client...")
-        process.exit()
+    const local = store.getState().reducerLocal
+    const all = [local, ...store.getState().reducerOnline]
+    const room = local.room
+    const username = local.username
 
-    } else if(input==='/exit' && room !== '') {
-        client.unsubscribe(getTopics(room, username))
-        store.dispatch(resetOnlineAction())
-        store.dispatch(resetLocalAction())
-        client.publish(`${topicPrefix}/leave/${room}/${username}`, '{}')
+    if(input==='/exit'){
+        if(room === ''){
+            rl.close()
+            client.end()
+            console.clear()
+            console.log("Stopping client...")
+            process.exit()
+
+        } else {
+            // client.unsubscribe(getTopics(room, username))
+            client.unsubscribe(`${topicPrefix}/+/${room}/#`)
+            store.dispatch(resetOnlineAction())
+            store.dispatch(resetLocalAction())
+            client.publish(`${topicPrefix}/leave/${room}/${username}`, '{}')
+        }
 
     } else if(input==='/join' && room===''){
         joinRoom()
+
+    } else if(input==='/play' && room!=='') {
+        const playingUsers = all.filter(user => user.playing).length
+        if(!local.playing && playingUsers<4) {
+            store.dispatch(setPlayingLocal(true))
+            client.publish(`${topicPrefix}/play/${room}/${username}`, '{}')
+        }
+
     } else if(input[0]!=='/' && room!==''){
         store.dispatch(addMessageAction(username, input))
         client.publish(`${topicPrefix}/message/${room}/${username}`, JSON.stringify({message: input}))
+
     } else {
         render()
     }
