@@ -1,7 +1,7 @@
 const readline = require('readline')
 const mqtt = require('mqtt')
-const {setRoomAction, setUsernameAction, resetLocalAction, addMessageAction, setJoiningAction, setPlayingLocal} = require('./actions/actionsLocal')
-const {addUserAction, removeUserAction, resetOnlineAction, setPlayingOnline} = require('./actions/actionsOnline')
+const {setRoomAction, setUsernameAction, resetLocalAction, addMessageAction, setJoiningAction, setPlayingLocalAction, setTankLocalAction, setTankBoardAction} = require('./actions/actionsLocal')
+const {addUserAction, removeUserAction, resetOnlineAction, setPlayingOnlineAction, setTankOnlineAction} = require('./actions/actionsOnline')
 
 const arguments = process.argv.slice(2)
 if (arguments.length !== 1){
@@ -53,7 +53,7 @@ const render = () => {
         console.log("Spectating:")
         allSpectating.forEach(user => console.log(`  ${user.username}`))
         console.log("Playing:")
-        allPlaying.forEach(user => console.log(`  ${user.username}`))
+        allPlaying.forEach(user => console.log(`  ${user.username} (${user.score})`))
         console.log()
         console.log("Messages:")
         local.messages.slice(-5).forEach(message => console.log(`  /${message.username}/ ${message.text}`))
@@ -64,10 +64,19 @@ const render = () => {
         console.log(`${horizontalLine}\\`)
         local.board.forEach((row, index) => {
             const rowString = row.reduce((accumulator, field) => {
-                if(field.tank){
-                    return `${accumulator}X`
-                } else {
+                if(field.tank===''){
                     return `${accumulator} `
+                } else {
+                    const getArrow = (username) => {
+                        const tankOwner = username===local.username ? local : online.find(user => user.username===username)
+                        const tank = tankOwner && tankOwner.tank
+                        const arrows = [
+                            ['⇑', '⇗', '⇒', '⇘', '⇓', '⇙', '⇐', '⇖'],
+                            ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖']
+                        ]
+                        return tank ? arrows[username===local.username ? 0 : 1][tank.rotation] : ' '
+                    }
+                    return `${accumulator}${getArrow(field.tank)}`
                 }
             }, '')
             console.log(`${rowString}|${index}`)
@@ -81,7 +90,9 @@ const render = () => {
 
 const getDataForPublish = user => ({
     username: user.username,
-    playing: user.playing
+    playing: user.playing,
+    tank: user.tank,
+    score: user.score
 })
 
 const askQuestion = async questionString => new Promise(resolve => {
@@ -137,11 +148,16 @@ client.on('message', (topic, message) => {
     } else if(topicSplit[1]==='info') {
         const user = topicSplit[3]
         if(user === username) {
-            store.dispatch(addUserAction(JSON.parse(message).user))
+            const messageUser = JSON.parse(message).user
+            store.dispatch(addUserAction(messageUser))
+            if(messageUser.playing) {
+                store.dispatch(setTankBoardAction(messageUser.tank.row, messageUser.tank.column, messageUser.username))
+            }
         }
 
     } else if(topicSplit[1]==='leave') {
         const user = topicSplit[3]
+        store.dispatch(setTankBoardAction(-1, -1, user))
         store.dispatch(removeUserAction(user))
 
     } else if(topicSplit[1]==='message') {
@@ -152,7 +168,10 @@ client.on('message', (topic, message) => {
     } else if(topicSplit[1]==='play') {
         const user = topicSplit[3]
         if(user !== username) {
-            store.dispatch(setPlayingOnline(true, user))
+            const messageTank = JSON.parse(message).tank
+            store.dispatch(setPlayingOnlineAction(true, user))
+            store.dispatch(setTankOnlineAction(messageTank.row, messageTank.column, messageTank.rotation, user))
+            store.dispatch(setTankBoardAction(messageTank.row, messageTank.column, user))
         }
     }
 })
@@ -182,12 +201,23 @@ rl.on('line', input => {
     } else if(input==='/join' && room===''){
         joinRoom()
 
-    } else if(input==='/play' && room!=='') {
-        const playingUsers = all.filter(user => user.playing).length
-        if(!local.playing && playingUsers<4) {
-            store.dispatch(setPlayingLocal(true))
-            client.publish(`${topicPrefix}/play/${room}/${username}`, '{}')
+    } else if(input==='/play' && room!=='' && !local.playing && all.filter(user => user.playing).length<4) {
+        store.dispatch(setPlayingLocalAction(true))
+
+        const getRandomIntInclusive = (min, max) => {
+            return Math.floor(Math.random() * (max - min + 1) + min)
         }
+        const emptyFields = store.getState().reducerLocal.board
+            .map((row, indexRow) =>
+                row.map((field, indexColumn) =>
+                    ({...field, indexRow, indexColumn})
+                )
+            ).flat().filter(field => field.tank==='')
+        const chosenField = emptyFields[getRandomIntInclusive(0, emptyFields.length-1)]
+        const rotation = getRandomIntInclusive(0, 7)
+        store.dispatch(setTankLocalAction(chosenField.indexRow, chosenField.indexColumn, rotation))
+        store.dispatch(setTankBoardAction(chosenField.indexRow, chosenField.indexColumn, username))
+        client.publish(`${topicPrefix}/play/${room}/${username}`, JSON.stringify({tank: {row: chosenField.indexRow, column: chosenField.indexColumn, rotation}}))
 
     } else if(input[0]!=='/' && room!==''){
         store.dispatch(addMessageAction(username, input))
