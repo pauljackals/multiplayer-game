@@ -1,0 +1,10 @@
+{
+  "name": "logic",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "mqtt": "^4.2.6",
+    "redux": "^4.0.5"
+  }
+}

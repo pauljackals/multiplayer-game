@@ -1,0 +1,5 @@
+module.exports = {
+    ADD_USER: 'ADD_USER',
+    REMOVE_USER: 'REMOVE_USER',
+    RESET_ONLINE: 'RESET_ONLINE'
+}
