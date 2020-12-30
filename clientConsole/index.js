@@ -10,7 +10,9 @@ const {
     setPlayingLocalAction,
     setTankLocalAction,
     setTankBoardAction,
-    setTurnLocalAction
+    setTurnLocalAction,
+    setPreviousNextLocalAction,
+    setFirstLocalAction
 } = require('./actions/actionsLocal')
 const {
     addUserAction,
@@ -18,7 +20,9 @@ const {
     resetOnlineAction,
     setPlayingOnlineAction,
     setTankOnlineAction,
-    setTurnOnlineAction
+    setTurnOnlineAction,
+    setFirstOnlineAction,
+    setPreviousNextOnlineAction
 } = require('./actions/actionsOnline')
 
 const arguments = process.argv.slice(2)
@@ -54,7 +58,10 @@ const getDataForPublish = user => ({
     playing: user.playing,
     tank: user.tank,
     score: user.score,
-    turn: user.turn
+    turn: user.turn,
+    next: user.next,
+    previous: user.previous,
+    first: user.first
 })
 
 const askQuestion = async questionString => new Promise(resolve => {
@@ -79,16 +86,19 @@ const joinRoom = async () => {
 
 const start = async () => {
     renderWithStore()
-    store.subscribe(renderWithStore)
 
     const username = await askQuestion("Type your username: ")
     store.dispatch(setUsernameAction(username))
+    renderWithStore()
 }
 start()
 
 client.on('message', (topic, message) => {
     const topicSplit = topic.split('/')
-    const username = store.getState().reducerLocal.username
+    const state = store.getState()
+    const local = state.reducerLocal
+    const online = state.reducerOnline
+    const username = local.username
 
     if(topicSplit[1] === 'join'){
         const user = topicSplit[3]
@@ -109,7 +119,26 @@ client.on('message', (topic, message) => {
 
     } else if(topicSplit[1]==='leave') {
         const user = topicSplit[3]
-        store.dispatch(setTankBoardAction(-1, -1, user))
+        const userObject = online.find(userOnline => userOnline.username===user)
+        if(userObject && userObject.playing){
+            store.dispatch(setTankBoardAction(-1, -1, user))
+            const previous = userObject.previous
+            const next = userObject.next
+            const properFunctionPrevious = previous===username ? setPreviousNextLocalAction : setPreviousNextOnlineAction
+            const properFunctionNext = next===username ? setPreviousNextLocalAction : setPreviousNextOnlineAction
+            if(next===previous){
+                if(next!==user){
+                    store.dispatch(properFunctionNext(next, next, next))
+                }
+            } else {
+                store.dispatch(properFunctionPrevious(undefined, next, previous))
+                store.dispatch(properFunctionNext(previous, undefined, next))
+            }
+            if(userObject.first && next!==user) {
+                const properFunctionFirst = next===username ? setFirstLocalAction : setFirstOnlineAction
+                store.dispatch(properFunctionFirst(true, next))
+            }
+        }
         store.dispatch(removeUserAction(user))
 
     } else if(topicSplit[1]==='message') {
@@ -125,12 +154,27 @@ client.on('message', (topic, message) => {
             store.dispatch(setTankOnlineAction(messageJson.tank.row, messageJson.tank.column, messageJson.tank.rotation, user))
             store.dispatch(setTankBoardAction(messageJson.tank.row, messageJson.tank.column, user))
             store.dispatch(setTurnOnlineAction(messageJson.turn, user))
+            store.dispatch(setFirstOnlineAction(messageJson.first, user))
+            store.dispatch(setPreviousNextOnlineAction(messageJson.previous, messageJson.next, user))
+            if(messageJson.next!==user && messageJson.previous!==user){
+                const properFunctionPrevious = messageJson.previous===username ? setPreviousNextLocalAction : setPreviousNextOnlineAction
+                const properFunctionNext = messageJson.next===username ? setPreviousNextLocalAction : setPreviousNextOnlineAction
+                if(messageJson.next===messageJson.previous) {
+                    store.dispatch(properFunctionNext(user, user, messageJson.next))
+                } else {
+                    store.dispatch(properFunctionPrevious(undefined, user, messageJson.previous))
+                    store.dispatch(properFunctionNext(user, undefined, messageJson.next))
+                }
+            }
         }
     }
+    renderWithStore()
 })
 
 rl.on('line', input => {
-    const local = store.getState().reducerLocal
+    const state = store.getState()
+    const local = state.reducerLocal
+    const online = state.reducerOnline
     const room = local.room
     const username = local.username
 
@@ -148,12 +192,12 @@ rl.on('line', input => {
             store.dispatch(resetLocalAction())
             client.publish(`${topicPrefix}/leave/${room}/${username}`, '{}')
         }
+        renderWithStore()
 
     } else if(input==='/join' && room===''){
         joinRoom()
 
     } else if(input==='/play' && room!=='' && !local.playing) {
-        store.dispatch(setPlayingLocalAction(true))
 
         const getRandomIntInclusive = (min, max) => {
             return Math.floor(Math.random() * (max - min + 1) + min)
@@ -166,17 +210,33 @@ rl.on('line', input => {
             ).flat().filter(field => field.tank==='')
         const chosenField = emptyFields[getRandomIntInclusive(0, emptyFields.length-1)]
         const rotation = getRandomIntInclusive(0, 7)
-        const turns = store.getState().reducerOnline.filter(user => user.playing).map(user => user.turn)
+        const turns = online.filter(user => user.playing).map(user => user.turn)
         const highestTurn = Math.max(-1, ...turns)
         store.dispatch(setTankLocalAction(chosenField.indexRow, chosenField.indexColumn, rotation))
         store.dispatch(setTankBoardAction(chosenField.indexRow, chosenField.indexColumn, username))
         store.dispatch(setTurnLocalAction(highestTurn+1))
-        client.publish(`${topicPrefix}/play/${room}/${username}`, JSON.stringify({tank: {row: chosenField.indexRow, column: chosenField.indexColumn, rotation}, turn: highestTurn+1}))
+
+        const firstPlayer = online.find(user => user.playing && user.first)
+        const lastPlayer = firstPlayer===undefined ? undefined : online.find(user => user.username===firstPlayer.previous)
+        const [previous, next] = firstPlayer!==lastPlayer || (firstPlayer===lastPlayer && firstPlayer!==undefined) ? [lastPlayer.username, firstPlayer.username] : [username, username]
+        store.dispatch(setPreviousNextLocalAction(previous, next))
+        store.dispatch(setFirstLocalAction(firstPlayer===undefined))
+        if(firstPlayer===lastPlayer) {
+            if(firstPlayer!==undefined) {
+                store.dispatch(setPreviousNextOnlineAction(username, username, firstPlayer.username))
+            }
+        } else {
+            store.dispatch(setPreviousNextOnlineAction(username, undefined, firstPlayer.username))
+            store.dispatch(setPreviousNextOnlineAction(undefined, username, lastPlayer.username))
+        }
+        store.dispatch(setPlayingLocalAction(true))
+        client.publish(`${topicPrefix}/play/${room}/${username}`, JSON.stringify({tank: {row: chosenField.indexRow, column: chosenField.indexColumn, rotation}, turn: highestTurn+1, first: firstPlayer===undefined, previous, next}))
+        renderWithStore()
 
     } else if(input[0]!=='/' && room!==''){
         store.dispatch(addMessageAction(username, input))
         client.publish(`${topicPrefix}/message/${room}/${username}`, JSON.stringify({message: input}))
-
+        renderWithStore()
     } else {
         renderWithStore()
     }

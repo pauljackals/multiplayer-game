@@ -4,7 +4,9 @@ const {
     RESET_ONLINE,
     SET_PLAYING_ONLINE,
     SET_TANK_ONLINE,
-    SET_TURN_ONLINE
+    SET_TURN_ONLINE,
+    SET_FIRST_ONLINE,
+    SET_PREVIOUS_NEXT_ONLINE
 } = require('../types/typesOnline')
 
 const reducerOnline = (state=[], action) => {
@@ -23,6 +25,12 @@ const reducerOnline = (state=[], action) => {
             return state.map(user => user.username===payload.username ? {...user, tank: {...user.tank, ...tank}} : user)
         } case SET_TURN_ONLINE: {
             return state.map(user => user.username===action.payload.username ? {...user, turn: action.payload.turn} : user)
+        } case SET_FIRST_ONLINE: {
+            return state.map(user => user.username===action.payload.username ? {...user, first: action.payload.first} : user)
+        } case SET_PREVIOUS_NEXT_ONLINE: {
+            const previous = action.payload.previous
+            const next = action.payload.next
+            return state.map(user => user.username===action.payload.username ? {...user, previous: (previous!==undefined ? previous : user.previous), next: (next!==undefined ? next : user.next)} : user)
         } default: {
             return state
         }

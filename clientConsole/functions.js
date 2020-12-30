@@ -20,21 +20,32 @@ const render = store => () => {
                 : (user1.username < user2.username ? -1
                     : 0)
         )
-        const allPlayingSorted = [...allPlaying].sort(
-            (user1, user2) => user1.turn - user2.turn
-        )
         console.log("Spectating:")
         allSpectatingSorted.forEach(user => console.log(`  ${user.username}`))
         console.log("Playing:")
-        allPlayingSorted.forEach(user => console.log(`  ${user.username} | ${user.turn}. | ${user.score}p | ${'+'.repeat(user.tank.health)}${'-'.repeat(3-user.tank.health)} | r${user.tank.row},c${user.tank.column}`))
+
+        const printUser = (user) => {
+            console.log(`  ${user.username} | ${user.score}p | ${'+'.repeat(user.tank.health)}${'-'.repeat(3-user.tank.health)} | ${'a'.repeat(user.tank.actions)}${'_'.repeat(3-user.tank.actions)} | r${user.tank.row},c${user.tank.column}`)
+
+            if(user.next!==user.username) {
+                const nextUser = allPlaying.find(userNext => userNext.username===user.next)
+                if(nextUser && !nextUser.first){
+                    printUser(nextUser)
+                }
+            }
+        }
+        const firstPlayer = allPlaying.find(user => user.first)
+        if(firstPlayer){
+            printUser(firstPlayer)
+        }
         console.log()
         console.log("Messages:")
         local.messages.slice(-5).forEach(message => console.log(`  /${message.username}/ ${message.text}`))
 
         console.log()
-        console.log(local.board[0].reduce((accumulator, value, index) => `${accumulator}${index}`, ''))
+        console.log(local.board[0].reduce((accumulator, value, index) => `${accumulator}${index}`, ' '))
         const horizontalLine = local.board[0].reduce((accumulator) => `${accumulator}-`, '')
-        console.log(`${horizontalLine}\\`)
+        console.log(`/${horizontalLine}\\`)
         local.board.forEach((row, index) => {
             const rowString = row.reduce((accumulator, field) => {
                 if(field.tank===''){
@@ -52,13 +63,13 @@ const render = store => () => {
                     return `${accumulator}${getArrow(field.tank)}`
                 }
             }, '')
-            console.log(`${rowString}|${index}`)
+            console.log(`|${rowString}|${index}`)
         })
-        console.log(`${horizontalLine}/`)
+        console.log(`\\${horizontalLine}/`)
     }
     if(local.username!=='' || room!=='') {
         console.log()
     }
 }
 
-module.exports={render}
+module.exports= {render}
