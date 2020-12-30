@@ -1,15 +1,16 @@
+require('dotenv').config()
 const readline = require('readline')
 const mqtt = require('mqtt')
 const {setRoomAction, setUsernameAction, resetLocalAction, addMessageAction, setJoiningAction, setPlayingLocalAction, setTankLocalAction, setTankBoardAction} = require('./actions/actionsLocal')
 const {addUserAction, removeUserAction, resetOnlineAction, setPlayingOnlineAction, setTankOnlineAction} = require('./actions/actionsOnline')
 
 const arguments = process.argv.slice(2)
-if (arguments.length !== 1){
+if (arguments.length !== 1 && !process.env.HOST){
     console.log('You must provide a broker address')
     process.exit(1)
 }
 
-const hostAddress = arguments[0]
+const hostAddress = arguments[0] ? arguments[0] : process.env.HOST
 
 const client = mqtt.connect(`mqtt://${hostAddress}`)
 
@@ -17,7 +18,7 @@ client.on('error', error => {
     console.clear()
     console.log(`Can't connect to ${error.address}`)
     client.end()
-    process.exit()
+    process.exit(1)
 })
 
 const rl = readline.createInterface({
