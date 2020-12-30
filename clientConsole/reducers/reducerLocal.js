@@ -1,4 +1,14 @@
-const {SET_ROOM, SET_USERNAME, RESET_LOCAL, ADD_MESSAGE, SET_JOINING, SET_PLAYING_LOCAL, SET_TANK_LOCAL, SET_TANK_BOARD} = require('../types/typesLocal')
+const {
+    SET_ROOM,
+    SET_USERNAME,
+    RESET_LOCAL,
+    ADD_MESSAGE,
+    SET_JOINING,
+    SET_PLAYING_LOCAL,
+    SET_TANK_LOCAL,
+    SET_TANK_BOARD,
+    SET_TURN_LOCAL
+} = require('../types/typesLocal')
 
 const fieldInitial = {tank: ''}
 const generateBoard = side => Array(side).fill([])
@@ -12,13 +22,14 @@ const INITIAL_STATE = {
         row: -1,
         column: -1,
         rotation: -1,
-        alive: true
+        actions: 3
     },
     score: 0,
     username: '',
     room: '',
     messages: [],
-    joining: true
+    joining: true,
+    turn: -1
 }
 
 const reducerLocal = (state=INITIAL_STATE, action) => {
@@ -53,6 +64,8 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
                 })
             )
             return {...state, board}
+        } case SET_TURN_LOCAL: {
+            return {...state, turn: action.payload.turn}
         } default: {
             return state
         }

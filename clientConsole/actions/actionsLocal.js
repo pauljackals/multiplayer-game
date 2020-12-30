@@ -1,4 +1,14 @@
-const {SET_ROOM, SET_USERNAME, RESET_LOCAL, ADD_MESSAGE, SET_JOINING, SET_PLAYING_LOCAL, SET_TANK_LOCAL, SET_TANK_BOARD} = require('../types/typesLocal')
+const {
+    SET_ROOM,
+    SET_USERNAME,
+    RESET_LOCAL,
+    ADD_MESSAGE,
+    SET_JOINING,
+    SET_PLAYING_LOCAL,
+    SET_TANK_LOCAL,
+    SET_TANK_BOARD,
+    SET_TURN_LOCAL
+} = require('../types/typesLocal')
 
 const setRoomAction = room => {
     return {type: SET_ROOM, payload: {room}}
@@ -24,4 +34,17 @@ const setTankLocalAction = (row, column, rotation) => {
 const setTankBoardAction = (row, column, username) => {
     return {type: SET_TANK_BOARD, payload: {row, column, username}}
 }
-module.exports={setRoomAction, setUsernameAction, resetLocalAction, addMessageAction, setJoiningAction, setPlayingLocalAction, setTankLocalAction, setTankBoardAction}
+const setTurnLocalAction = turn => {
+    return {type: SET_TURN_LOCAL, payload: {turn}}
+}
+module.exports={
+    setRoomAction,
+    setUsernameAction,
+    resetLocalAction,
+    addMessageAction,
+    setJoiningAction,
+    setPlayingLocalAction,
+    setTankLocalAction,
+    setTankBoardAction,
+    setTurnLocalAction
+}

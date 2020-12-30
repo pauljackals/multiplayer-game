@@ -1,8 +1,25 @@
 require('dotenv').config()
 const readline = require('readline')
 const mqtt = require('mqtt')
-const {setRoomAction, setUsernameAction, resetLocalAction, addMessageAction, setJoiningAction, setPlayingLocalAction, setTankLocalAction, setTankBoardAction} = require('./actions/actionsLocal')
-const {addUserAction, removeUserAction, resetOnlineAction, setPlayingOnlineAction, setTankOnlineAction} = require('./actions/actionsOnline')
+const {
+    setRoomAction,
+    setUsernameAction,
+    resetLocalAction,
+    addMessageAction,
+    setJoiningAction,
+    setPlayingLocalAction,
+    setTankLocalAction,
+    setTankBoardAction,
+    setTurnLocalAction
+} = require('./actions/actionsLocal')
+const {
+    addUserAction,
+    removeUserAction,
+    resetOnlineAction,
+    setPlayingOnlineAction,
+    setTankOnlineAction,
+    setTurnOnlineAction
+} = require('./actions/actionsOnline')
 
 const arguments = process.argv.slice(2)
 if (arguments.length !== 1 && !process.env.HOST){
@@ -29,96 +46,30 @@ const rl = readline.createInterface({
 const topicPrefix = 'game'
 
 const store = require('./store')
-
-const render = () => {
-    console.clear()
-    const state = store.getState()
-    const local = state.reducerLocal
-    const online = state.reducerOnline
-    const room = local.room
-
-    if(local.username!=='' || room!=='') {
-        console.log(`User: ${local.username}`)
-    }
-    if(room !== '') {
-        console.log(`Room: ${room}`)
-        console.log()
-        const all = [local, ...online].sort(
-            (user1, user2) => user1.username > user2.username ? 1
-                : (user1.username < user2.username ? -1
-                    : 0)
-        )
-        const [allSpectating, allPlaying] = all.reduce(
-            (accumulator, user) => !user.playing ? [[...accumulator[0], user], accumulator[1]] : [accumulator[0], [...accumulator[1], user]], [[], []]
-        )
-        console.log("Spectating:")
-        allSpectating.forEach(user => console.log(`  ${user.username}`))
-        console.log("Playing:")
-        allPlaying.forEach(user => console.log(`  ${user.username} (${user.score})`))
-        console.log()
-        console.log("Messages:")
-        local.messages.slice(-5).forEach(message => console.log(`  /${message.username}/ ${message.text}`))
-
-        console.log()
-        console.log(local.board[0].reduce((accumulator, value, index) => `${accumulator}${index}`, ''))
-        const horizontalLine = local.board[0].reduce((accumulator) => `${accumulator}-`, '')
-        console.log(`${horizontalLine}\\`)
-        local.board.forEach((row, index) => {
-            const rowString = row.reduce((accumulator, field) => {
-                if(field.tank===''){
-                    return `${accumulator} `
-                } else {
-                    const getArrow = (username) => {
-                        const tankOwner = username===local.username ? local : online.find(user => user.username===username)
-                        const tank = tankOwner && tankOwner.tank
-                        const arrows = [
-                            ['⇑', '⇗', '⇒', '⇘', '⇓', '⇙', '⇐', '⇖'],
-                            ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖']
-                        ]
-                        return tank ? arrows[username===local.username ? 0 : 1][tank.rotation] : ' '
-                    }
-                    return `${accumulator}${getArrow(field.tank)}`
-                }
-            }, '')
-            console.log(`${rowString}|${index}`)
-        })
-        console.log(`${horizontalLine}/`)
-    }
-    if(local.username!=='' || room!=='') {
-        console.log()
-    }
-}
+const {render} = require('./functions')
+const renderWithStore = render(store)
 
 const getDataForPublish = user => ({
     username: user.username,
     playing: user.playing,
     tank: user.tank,
-    score: user.score
+    score: user.score,
+    turn: user.turn
 })
 
 const askQuestion = async questionString => new Promise(resolve => {
     rl.question(questionString, resolve)
 })
 
-// const getTopics = (room, username) => [
-//     `${topicPrefix}/action/${room}/#`,
-//     `${topicPrefix}/message/${room}/#`,
-//     `${topicPrefix}/info/${room}/${username}`,
-//     `${topicPrefix}/join/${room}/#`,
-//     `${topicPrefix}/leave/${room}/#`
-// ]
-
 const joinRoom = async () => {
-    render()
+    renderWithStore()
     const username = store.getState().reducerLocal.username
     const room = await askQuestion("Type room: ")
     store.dispatch(setRoomAction(room))
 
     client.subscribe(`${topicPrefix}/+/${room}/#`, () => {
-    // client.subscribe(getTopics(room, username), () => {
         client.publish(`${topicPrefix}/join/${room}/${username}`, JSON.stringify({user: getDataForPublish(store.getState().reducerLocal)}), () => {
                 setTimeout(() => {
-                    // client.unsubscribe(`${topicPrefix}/info/${room}/${username}`)
                     store.dispatch(setJoiningAction(false))
                 }, 1000)
             }
@@ -127,8 +78,8 @@ const joinRoom = async () => {
 }
 
 const start = async () => {
-    render()
-    store.subscribe(render)
+    renderWithStore()
+    store.subscribe(renderWithStore)
 
     const username = await askQuestion("Type your username: ")
     store.dispatch(setUsernameAction(username))
@@ -169,17 +120,17 @@ client.on('message', (topic, message) => {
     } else if(topicSplit[1]==='play') {
         const user = topicSplit[3]
         if(user !== username) {
-            const messageTank = JSON.parse(message).tank
+            const messageJson = JSON.parse(message)
             store.dispatch(setPlayingOnlineAction(true, user))
-            store.dispatch(setTankOnlineAction(messageTank.row, messageTank.column, messageTank.rotation, user))
-            store.dispatch(setTankBoardAction(messageTank.row, messageTank.column, user))
+            store.dispatch(setTankOnlineAction(messageJson.tank.row, messageJson.tank.column, messageJson.tank.rotation, user))
+            store.dispatch(setTankBoardAction(messageJson.tank.row, messageJson.tank.column, user))
+            store.dispatch(setTurnOnlineAction(messageJson.turn, user))
         }
     }
 })
 
 rl.on('line', input => {
     const local = store.getState().reducerLocal
-    const all = [local, ...store.getState().reducerOnline]
     const room = local.room
     const username = local.username
 
@@ -192,7 +143,6 @@ rl.on('line', input => {
             process.exit()
 
         } else {
-            // client.unsubscribe(getTopics(room, username))
             client.unsubscribe(`${topicPrefix}/+/${room}/#`)
             store.dispatch(resetOnlineAction())
             store.dispatch(resetLocalAction())
@@ -202,7 +152,7 @@ rl.on('line', input => {
     } else if(input==='/join' && room===''){
         joinRoom()
 
-    } else if(input==='/play' && room!=='' && !local.playing && all.filter(user => user.playing).length<4) {
+    } else if(input==='/play' && room!=='' && !local.playing) {
         store.dispatch(setPlayingLocalAction(true))
 
         const getRandomIntInclusive = (min, max) => {
@@ -216,15 +166,18 @@ rl.on('line', input => {
             ).flat().filter(field => field.tank==='')
         const chosenField = emptyFields[getRandomIntInclusive(0, emptyFields.length-1)]
         const rotation = getRandomIntInclusive(0, 7)
+        const turns = store.getState().reducerOnline.filter(user => user.playing).map(user => user.turn)
+        const highestTurn = Math.max(-1, ...turns)
         store.dispatch(setTankLocalAction(chosenField.indexRow, chosenField.indexColumn, rotation))
         store.dispatch(setTankBoardAction(chosenField.indexRow, chosenField.indexColumn, username))
-        client.publish(`${topicPrefix}/play/${room}/${username}`, JSON.stringify({tank: {row: chosenField.indexRow, column: chosenField.indexColumn, rotation}}))
+        store.dispatch(setTurnLocalAction(highestTurn+1))
+        client.publish(`${topicPrefix}/play/${room}/${username}`, JSON.stringify({tank: {row: chosenField.indexRow, column: chosenField.indexColumn, rotation}, turn: highestTurn+1}))
 
     } else if(input[0]!=='/' && room!==''){
         store.dispatch(addMessageAction(username, input))
         client.publish(`${topicPrefix}/message/${room}/${username}`, JSON.stringify({message: input}))
 
     } else {
-        render()
+        renderWithStore()
     }
 })

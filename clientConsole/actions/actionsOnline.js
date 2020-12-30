@@ -1,4 +1,11 @@
-const {ADD_USER, REMOVE_USER, RESET_ONLINE, SET_PLAYING_ONLINE, SET_TANK_ONLINE} = require('../types/typesOnline')
+const {
+    ADD_USER,
+    REMOVE_USER,
+    RESET_ONLINE,
+    SET_PLAYING_ONLINE,
+    SET_TANK_ONLINE,
+    SET_TURN_ONLINE
+} = require('../types/typesOnline')
 
 const addUserAction = user => {
     return {type: ADD_USER, payload: {user}}
@@ -15,4 +22,14 @@ const setPlayingOnlineAction = (playing, username) => {
 const setTankOnlineAction = (row, column, rotation, username) => {
     return {type: SET_TANK_ONLINE, payload: {row, column, rotation, username}}
 }
-module.exports={addUserAction, removeUserAction, resetOnlineAction, setPlayingOnlineAction, setTankOnlineAction}
+const setTurnOnlineAction = (turn, username) => {
+    return {type: SET_TURN_ONLINE, payload: {turn, username}}
+}
+module.exports={
+    addUserAction,
+    removeUserAction,
+    resetOnlineAction,
+    setPlayingOnlineAction,
+    setTankOnlineAction,
+    setTurnOnlineAction
+}
