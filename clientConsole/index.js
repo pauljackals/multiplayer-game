@@ -202,14 +202,9 @@ rl.on('line', input => {
         const getRandomIntInclusive = (min, max) => {
             return Math.floor(Math.random() * (max - min + 1) + min)
         }
-        const emptyFields = store.getState().reducerLocal.board
-            .map((row, indexRow) =>
-                row.map((field, indexColumn) =>
-                    ({...field, indexRow, indexColumn})
-                )
-            ).flat().filter(field => field.tank==='')
+        const emptyFields = store.getState().reducerLocal.board.flat().filter(field => field.tank==='')
         const chosenField = emptyFields[getRandomIntInclusive(0, emptyFields.length-1)]
-        const rotation = getRandomIntInclusive(0, 7)
+        const rotation = getRandomIntInclusive(0, 3)
         const turns = online.filter(user => user.playing).map(user => user.turn)
         const highestTurn = Math.max(-1, ...turns)
         store.dispatch(setTankLocalAction(chosenField.indexRow, chosenField.indexColumn, rotation))

@@ -55,8 +55,10 @@ const render = store => () => {
                         const tankOwner = username===local.username ? local : online.find(user => user.username===username)
                         const tank = tankOwner && tankOwner.tank
                         const arrows = [
-                            ['⇑', '⇗', '⇒', '⇘', '⇓', '⇙', '⇐', '⇖'],
-                            ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖']
+                            // ['⇑', '⇗', '⇒', '⇘', '⇓', '⇙', '⇐', '⇖'],
+                            // ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'],
+                            ['⇑', '⇒', '⇓', '⇐'],
+                            ['↑', '→', '↓', '←']
                         ]
                         return tank ? arrows[username===local.username ? 0 : 1][tank.rotation] : '?'
                     }

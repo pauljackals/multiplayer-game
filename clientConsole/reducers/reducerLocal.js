@@ -13,8 +13,11 @@ const {
 } = require('../types/typesLocal')
 
 const fieldInitial = {tank: ''}
-const generateBoard = side => Array(side).fill([])
-    .map(() => Array(side).fill(fieldInitial));
+const generateBoard = side => Array(side).fill([]).map(
+    (row, indexRow) => Array(side).fill({}).map(
+        (field, indexColumn) => ({indexRow, indexColumn, ...fieldInitial})
+    )
+)
 
 const INITIAL_STATE = {
     board: generateBoard(10),
@@ -57,12 +60,12 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
             return {...state, tank: {...state.tank, ...tank}}
         } case SET_TANK_BOARD: {
             const payload = action.payload
-            const board = state.board.map((row, indexRow) =>
-                row.map((field, indexColumn) => {
-                    if(indexRow===payload.row && indexColumn===payload.column) {
+            const board = state.board.map(row =>
+                row.map(field => {
+                    if(field.indexRow===payload.row && field.indexColumn===payload.column) {
                         return {tank: payload.username}
                     } else if (field.tank===payload.username){
-                        return fieldInitial
+                        return {...field, ...fieldInitial}
                     } else {
                         return field
                     }
