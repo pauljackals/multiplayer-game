@@ -4,7 +4,7 @@ const {
     RESET_ONLINE,
     SET_PLAYING_ONLINE,
     SET_TANK_ONLINE,
-    SET_TURN_ONLINE,
+    // SET_TURN_ONLINE,
     SET_FIRST_ONLINE,
     SET_PREVIOUS_NEXT_ONLINE
 } = require('../types/typesOnline')
@@ -24,9 +24,9 @@ const setPlayingOnlineAction = (playing, username) => {
 const setTankOnlineAction = (row, column, rotation, username) => {
     return {type: SET_TANK_ONLINE, payload: {row, column, rotation, username}}
 }
-const setTurnOnlineAction = (turn, username) => {
-    return {type: SET_TURN_ONLINE, payload: {turn, username}}
-}
+// const setTurnOnlineAction = (turn, username) => {
+//     return {type: SET_TURN_ONLINE, payload: {turn, username}}
+// }
 const setPreviousNextOnlineAction = (previous, next, username) => {
     return {type: SET_PREVIOUS_NEXT_ONLINE, payload: {previous, next, username}}
 }
@@ -39,7 +39,7 @@ module.exports={
     resetOnlineAction,
     setPlayingOnlineAction,
     setTankOnlineAction,
-    setTurnOnlineAction,
+    // setTurnOnlineAction,
     setPreviousNextOnlineAction,
     setFirstOnlineAction
 }

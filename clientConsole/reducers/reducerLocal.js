@@ -7,7 +7,7 @@ const {
     SET_PLAYING_LOCAL,
     SET_TANK_LOCAL,
     SET_TANK_BOARD,
-    SET_TURN_LOCAL,
+    // SET_TURN_LOCAL,
     SET_PREVIOUS_NEXT_LOCAL,
     SET_FIRST_LOCAL
 } = require('../types/typesLocal')
@@ -34,7 +34,7 @@ const INITIAL_STATE = {
     room: '',
     messages: [],
     joining: true,
-    turn: -1,
+    // turn: -1,
     next: '',
     previous: '',
     first: true
@@ -72,8 +72,8 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
                 })
             )
             return {...state, board}
-        } case SET_TURN_LOCAL: {
-            return {...state, turn: action.payload.turn}
+        // } case SET_TURN_LOCAL: {
+        //     return {...state, turn: action.payload.turn}
         } case SET_PREVIOUS_NEXT_LOCAL: {
             const previous = action.payload.previous
             const next = action.payload.next
