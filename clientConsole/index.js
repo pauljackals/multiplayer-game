@@ -10,7 +10,7 @@ const {
     setPlayingLocalAction,
     setTankLocalAction,
     setTankBoardAction,
-    setTurnLocalAction,
+    // setTurnLocalAction,
     setPreviousNextLocalAction,
     setFirstLocalAction
 } = require('./actions/actionsLocal')
@@ -20,7 +20,7 @@ const {
     resetOnlineAction,
     setPlayingOnlineAction,
     setTankOnlineAction,
-    setTurnOnlineAction,
+    // setTurnOnlineAction,
     setFirstOnlineAction,
     setPreviousNextOnlineAction
 } = require('./actions/actionsOnline')
@@ -58,7 +58,7 @@ const getDataForPublish = user => ({
     playing: user.playing,
     tank: user.tank,
     score: user.score,
-    turn: user.turn,
+    // turn: user.turn,
     next: user.next,
     previous: user.previous,
     first: user.first
@@ -153,7 +153,7 @@ client.on('message', (topic, message) => {
             store.dispatch(setPlayingOnlineAction(true, user))
             store.dispatch(setTankOnlineAction(messageJson.tank.row, messageJson.tank.column, messageJson.tank.rotation, user))
             store.dispatch(setTankBoardAction(messageJson.tank.row, messageJson.tank.column, user))
-            store.dispatch(setTurnOnlineAction(messageJson.turn, user))
+            // store.dispatch(setTurnOnlineAction(messageJson.turn, user))
             store.dispatch(setFirstOnlineAction(messageJson.first, user))
             store.dispatch(setPreviousNextOnlineAction(messageJson.previous, messageJson.next, user))
             if(messageJson.next!==user && messageJson.previous!==user){
@@ -205,11 +205,11 @@ rl.on('line', input => {
         const emptyFields = store.getState().reducerLocal.board.flat().filter(field => field.tank==='')
         const chosenField = emptyFields[getRandomIntInclusive(0, emptyFields.length-1)]
         const rotation = getRandomIntInclusive(0, 3)
-        const turns = online.filter(user => user.playing).map(user => user.turn)
-        const highestTurn = Math.max(-1, ...turns)
+        // const turns = online.filter(user => user.playing).map(user => user.turn)
+        // const highestTurn = Math.max(-1, ...turns)
         store.dispatch(setTankLocalAction(chosenField.indexRow, chosenField.indexColumn, rotation))
         store.dispatch(setTankBoardAction(chosenField.indexRow, chosenField.indexColumn, username))
-        store.dispatch(setTurnLocalAction(highestTurn+1))
+        // store.dispatch(setTurnLocalAction(highestTurn+1))
 
         const firstPlayer = online.find(user => user.playing && user.first)
         const lastPlayer = firstPlayer===undefined ? undefined : online.find(user => user.username===firstPlayer.previous)
@@ -225,7 +225,13 @@ rl.on('line', input => {
             store.dispatch(setPreviousNextOnlineAction(undefined, username, lastPlayer.username))
         }
         store.dispatch(setPlayingLocalAction(true))
-        client.publish(`${topicPrefix}/play/${room}/${username}`, JSON.stringify({tank: {row: chosenField.indexRow, column: chosenField.indexColumn, rotation}, turn: highestTurn+1, first: firstPlayer===undefined, previous, next}))
+        client.publish(`${topicPrefix}/play/${room}/${username}`, JSON.stringify({
+            tank: {row: chosenField.indexRow, column: chosenField.indexColumn, rotation},
+            // turn: highestTurn+1,
+            first: firstPlayer===undefined,
+            previous,
+            next
+        }))
         renderWithStore()
 
     } else if(input[0]!=='/' && room!==''){
