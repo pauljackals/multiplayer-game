@@ -25,7 +25,7 @@ const render = store => () => {
         console.log("Playing:")
 
         const printUser = (user) => {
-            console.log(`  ${user.username} | ${user.score}p | ${'+'.repeat(user.tank.health)}${'-'.repeat(3-user.tank.health)} | ${'a'.repeat(user.tank.actions)}${'_'.repeat(3-user.tank.actions)} | r${user.tank.row},c${user.tank.column}`)
+            console.log(`${user.ready ? '✓' : 'X'}  ${user.username} | ${user.score}p | ${'+'.repeat(user.tank.health)}${'-'.repeat(3-user.tank.health)} | ${'a'.repeat(user.tank.actions)}${'_'.repeat(3-user.tank.actions)} | r${user.tank.row},c${user.tank.column}`)
 
             if(user.next!==user.username) {
                 const nextUser = allPlaying.find(userNext => userNext.username===user.next)

@@ -9,7 +9,8 @@ const {
     SET_TANK_BOARD,
     // SET_TURN_LOCAL,
     SET_PREVIOUS_NEXT_LOCAL,
-    SET_FIRST_LOCAL
+    SET_FIRST_LOCAL,
+    SET_READY_LOCAL
 } = require('../types/typesLocal')
 
 const setRoomAction = room => {
@@ -45,6 +46,9 @@ const setPreviousNextLocalAction = (previous, next) => {
 const setFirstLocalAction = first => {
     return {type: SET_FIRST_LOCAL, payload: {first}}
 }
+const setReadyLocalAction = ready => {
+    return {type: SET_READY_LOCAL, payload: {ready}}
+}
 module.exports={
     setRoomAction,
     setUsernameAction,
@@ -56,5 +60,6 @@ module.exports={
     setTankBoardAction,
     // setTurnLocalAction,
     setPreviousNextLocalAction,
-    setFirstLocalAction
+    setFirstLocalAction,
+    setReadyLocalAction
 }

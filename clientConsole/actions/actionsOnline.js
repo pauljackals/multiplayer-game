@@ -6,7 +6,8 @@ const {
     SET_TANK_ONLINE,
     // SET_TURN_ONLINE,
     SET_FIRST_ONLINE,
-    SET_PREVIOUS_NEXT_ONLINE
+    SET_PREVIOUS_NEXT_ONLINE,
+    SET_READY_ONLINE
 } = require('../types/typesOnline')
 
 const addUserAction = user => {
@@ -33,6 +34,9 @@ const setPreviousNextOnlineAction = (previous, next, username) => {
 const setFirstOnlineAction = (first, username) => {
     return {type: SET_FIRST_ONLINE, payload: {first, username}}
 }
+const setReadyOnlineAction = (ready, username) => {
+    return {type: SET_READY_ONLINE, payload: {ready, username}}
+}
 module.exports={
     addUserAction,
     removeUserAction,
@@ -41,5 +45,6 @@ module.exports={
     setTankOnlineAction,
     // setTurnOnlineAction,
     setPreviousNextOnlineAction,
-    setFirstOnlineAction
+    setFirstOnlineAction,
+    setReadyOnlineAction
 }

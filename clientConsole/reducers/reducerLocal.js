@@ -9,7 +9,8 @@ const {
     SET_TANK_BOARD,
     // SET_TURN_LOCAL,
     SET_PREVIOUS_NEXT_LOCAL,
-    SET_FIRST_LOCAL
+    SET_FIRST_LOCAL,
+    SET_READY_LOCAL
 } = require('../types/typesLocal')
 
 const fieldInitial = {tank: ''}
@@ -37,7 +38,8 @@ const INITIAL_STATE = {
     // turn: -1,
     next: '',
     previous: '',
-    first: true
+    first: true,
+    ready: false
 }
 
 const reducerLocal = (state=INITIAL_STATE, action) => {
@@ -80,6 +82,8 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
             return {...state, previous: (previous!==undefined ? previous : state.previous), next: (next!==undefined ? next : state.next)}
         } case SET_FIRST_LOCAL: {
             return {...state, first: action.payload.first}
+        } case SET_READY_LOCAL: {
+            return {...state, ready: action.payload.ready}
         } default: {
             return state
         }
