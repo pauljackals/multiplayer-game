@@ -6,14 +6,15 @@ const {
     setUsernameAction,
     resetLocalAction,
     addMessageAction,
-    setJoiningAction,
     setPlayingLocalAction,
     setTankLocalAction,
     setTankBoardAction,
     setTurnLocalAction,
     setPreviousNextLocalAction,
     setFirstLocalAction,
-    setReadyLocalAction
+    setReadyLocalAction,
+    decrementActionsLocalAction,
+    resetActionsLocalAction
 } = require('./actions/actionsLocal')
 const {
     addUserAction,
@@ -24,7 +25,9 @@ const {
     setTurnOnlineAction,
     setFirstOnlineAction,
     setPreviousNextOnlineAction,
-    setReadyOnlineAction
+    setReadyOnlineAction,
+    decrementActionsOnlineAction,
+    resetActionsOnlineAction
 } = require('./actions/actionsOnline')
 
 const hostAddress = process.env.HOST
@@ -33,7 +36,8 @@ const client = mqtt.connect(`mqtt://${hostAddress}`)
 
 client.on('error', error => {
     console.clear()
-    console.log(`Can't connect to ${error.address}`)
+    console.log(error)
+    console.log(`Can't connect to ${hostAddress}`)
     client.end()
     process.exit(1)
 })
@@ -49,16 +53,22 @@ const store = require('./store')
 const {render} = require('./functions')
 const renderWithStore = render(store)
 
+// const getDataForPublish = user => ({
+//     username: user.username,
+//     playing: user.playing,
+//     tank: user.tank,
+//     score: user.score,
+//     turn: user.turn,
+//     next: user.next,
+//     previous: user.previous,
+//     first: user.first,
+//     ready: user.ready
+// })
 const getDataForPublish = user => ({
-    username: user.username,
-    playing: user.playing,
-    tank: user.tank,
-    score: user.score,
-    turn: user.turn,
-    next: user.next,
-    previous: user.previous,
-    first: user.first,
-    ready: user.ready
+    ...user,
+    board: undefined,
+    room: undefined,
+    messages: undefined
 })
 
 const askQuestion = async questionString => new Promise(resolve => {
@@ -71,12 +81,7 @@ const joinRoom = async () => {
     store.dispatch(setRoomAction(room))
 
     client.subscribe(`${topicPrefix}/+/${room}/#`, () => {
-        client.publish(`${topicPrefix}/join/${room}/${username}`, JSON.stringify({user: getDataForPublish(store.getState().reducerLocal)}), () => {
-                setTimeout(() => {
-                    store.dispatch(setJoiningAction(false))
-                }, 1000)
-            }
-        )
+        client.publish(`${topicPrefix}/join/${room}/${username}`, JSON.stringify({user: getDataForPublish(store.getState().reducerLocal)}))
     })
 }
 
@@ -134,8 +139,10 @@ client.on('message', (topic, message) => {
             if(userObject.turn && next!==messageUser) {
                 if(next===localUsername) {
                     store.dispatch(setTurnLocalAction(true))
+                    store.dispatch(resetActionsLocalAction(true))
                 } else {
                     store.dispatch(setTurnOnlineAction(true, next))
+                    store.dispatch(resetActionsOnlineAction(true, userObject.next))
                 }
             }
         }
@@ -184,14 +191,17 @@ client.on('message', (topic, message) => {
             store.dispatch(setTurnOnlineAction(false, messageUser))
             if(local.previous===messageUser) {
                 store.dispatch(setTurnLocalAction(true))
+                store.dispatch(resetActionsLocalAction(true))
             } else {
                 const userObject = [local, ...online].find(u => u.username===messageUser)
                 store.dispatch(setTurnOnlineAction(true, userObject.next))
+                store.dispatch(resetActionsOnlineAction(true, userObject.next))
             }
         }
     } else if (topicSplit[1]==='action') {
         if(messageUser !== localUsername) {
             const messageJson = JSON.parse(message)
+            store.dispatch(decrementActionsOnlineAction(messageUser))
             store.dispatch(setTankOnlineAction(messageJson.row, messageJson.column, messageJson.rotation, messageUser))
             store.dispatch(setTankBoardAction(messageJson.row, messageJson.column, messageUser))
         }
@@ -273,11 +283,18 @@ rl.on('line', async input => {
             }
 
         } else if(input==='/end' && local.turn){
-            store.dispatch(setTurnLocalAction(false))
-            store.dispatch(setTurnOnlineAction(true, local.next))
+            const next = local.next
+            if(next===username) {
+                store.dispatch(resetActionsLocalAction(true))
+
+            } else {
+                store.dispatch(setTurnLocalAction(false))
+                store.dispatch(setTurnOnlineAction(true, local.next))
+                store.dispatch(resetActionsOnlineAction(true, local.next))
+            }
             client.publish(`${topicPrefix}/end/${room}/${username}`, '{}')
 
-        } else if(local.turn && (input==='/back' || input==='/forward')){
+        } else if(local.turn && local.tank.actions>0 && (input==='/back' || input==='/forward')){
             const tank = local.tank
             const board = local.board
             const boardSize = board.length
@@ -298,12 +315,13 @@ rl.on('line', async input => {
                     row: rowNew,
                     column: columnNew
                 }
+                store.dispatch(decrementActionsLocalAction())
                 store.dispatch(setTankLocalAction(newLocation.row, newLocation.column, newLocation.rotation))
                 store.dispatch(setTankBoardAction(newLocation.row, newLocation.column, username))
                 client.publish(`${topicPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
             }
 
-        } else if(local.turn && (input==='/left' || input==='/right')){
+        } else if(local.turn && local.tank.actions>0 && (input==='/left' || input==='/right')){
             const tank = local.tank
             const maxRotation = 4
             const newLocation = {
@@ -311,6 +329,7 @@ rl.on('line', async input => {
                 row: tank.row,
                 column: tank.column
             }
+            store.dispatch(decrementActionsLocalAction())
             store.dispatch(setTankLocalAction(newLocation.row, newLocation.column, newLocation.rotation))
             client.publish(`${topicPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
 

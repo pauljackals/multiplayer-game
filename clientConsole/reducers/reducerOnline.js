@@ -8,7 +8,9 @@ const {
     SET_TURN_ONLINE,
     SET_FIRST_ONLINE,
     SET_PREVIOUS_NEXT_ONLINE,
-    SET_READY_ONLINE
+    SET_READY_ONLINE,
+    DECREMENT_ACTIONS_ONLINE,
+    RESET_ACTIONS_ONLINE
 } = require('../types/typesOnline')
 
 // const reducerOnline = (state=[], action) => {
@@ -60,7 +62,9 @@ const reducerOnline = (state=[], action) => {
         } case RESET_ONLINE: {
             return []
 
-        } case SET_PLAYING_ONLINE:
+        } case RESET_ACTIONS_ONLINE:
+        case DECREMENT_ACTIONS_ONLINE:
+        case SET_PLAYING_ONLINE:
         case SET_TANK_ONLINE:
         case SET_TURN_ONLINE:
         case SET_FIRST_ONLINE:

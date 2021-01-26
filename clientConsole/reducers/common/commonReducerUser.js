@@ -4,7 +4,9 @@ const {
     SET_TURN_LOCAL,
     SET_PREVIOUS_NEXT_LOCAL,
     SET_FIRST_LOCAL,
-    SET_READY_LOCAL
+    SET_READY_LOCAL,
+    DECREMENT_ACTIONS_LOCAL,
+    RESET_ACTIONS_LOCAL
 } = require('../../types/typesLocal')
 const {
     SET_PLAYING_ONLINE,
@@ -12,7 +14,9 @@ const {
     SET_TURN_ONLINE,
     SET_FIRST_ONLINE,
     SET_PREVIOUS_NEXT_ONLINE,
-    SET_READY_ONLINE
+    SET_READY_ONLINE,
+    DECREMENT_ACTIONS_ONLINE,
+    RESET_ACTIONS_ONLINE
 } = require('../../types/typesOnline')
 
 const commonReducerUser = (state, action) => {
@@ -44,6 +48,15 @@ const commonReducerUser = (state, action) => {
         } case SET_READY_ONLINE:
         case SET_READY_LOCAL: {
             return {...state, ready: action.payload.ready}
+
+        } case DECREMENT_ACTIONS_ONLINE:
+        case DECREMENT_ACTIONS_LOCAL: {
+            const tank = state.tank
+            return {...state, tank: {...tank, actions: tank.actions-1}}
+
+        } case RESET_ACTIONS_ONLINE:
+        case RESET_ACTIONS_LOCAL: {
+            return {...state, tank: {...state.tank, actions: action.payload.full ? 3 : 0}}
 
         } default: {
             return state

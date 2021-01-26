@@ -4,14 +4,15 @@ const {
     SET_USERNAME,
     RESET_LOCAL,
     ADD_MESSAGE,
-    SET_JOINING,
     SET_PLAYING_LOCAL,
     SET_TANK_LOCAL,
     SET_TANK_BOARD,
     SET_TURN_LOCAL,
     SET_PREVIOUS_NEXT_LOCAL,
     SET_FIRST_LOCAL,
-    SET_READY_LOCAL
+    SET_READY_LOCAL,
+    DECREMENT_ACTIONS_LOCAL,
+    RESET_ACTIONS_LOCAL
 } = require('../types/typesLocal')
 
 const fieldInitial = {tank: ''}
@@ -35,7 +36,6 @@ const INITIAL_STATE = {
     username: '',
     room: '',
     messages: [],
-    joining: true,
     turn: false,
     next: '',
     previous: '',
@@ -116,9 +116,6 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
         } case ADD_MESSAGE: {
             return {...state, messages: [...state.messages, action.payload.message]}
 
-        } case SET_JOINING: {
-            return {...state, joining: action.payload.joining}
-
         } case SET_TANK_BOARD: {
             const payload = action.payload
             const board = state.board.map(row =>
@@ -134,7 +131,9 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
             )
             return {...state, board}
 
-        } case SET_TANK_LOCAL:
+        } case RESET_ACTIONS_LOCAL:
+        case DECREMENT_ACTIONS_LOCAL:
+        case SET_TANK_LOCAL:
         case SET_TURN_LOCAL:
         case SET_PREVIOUS_NEXT_LOCAL:
         case SET_FIRST_LOCAL:

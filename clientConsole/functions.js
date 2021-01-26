@@ -45,9 +45,9 @@ const render = store => () => {
         local.messages.slice(-5).forEach(message => console.log(`  /${message.username}/ ${message.text}`))
 
         console.log()
-        console.log(local.board[0].reduce((accumulator, value, index) => `${accumulator}${index}`, ' '))
+        console.log(local.board[0].reduce((accumulator, value, index) => `${accumulator}${index}`, '  '))
         const horizontalLine = local.board[0].reduce((accumulator) => `${accumulator}-`, '')
-        console.log(`/${horizontalLine}\\`)
+        console.log(` /${horizontalLine}\\`)
         const isLineOfSight = (row, column) => {
             const tank = local.tank
             const rotation = tank.rotation
@@ -83,9 +83,9 @@ const render = store => () => {
                     return `${accumulator}${getArrow(field.tank)}`
                 }
             }, '')
-            console.log(`|${rowString}|${index}`)
+            console.log(`${index}|${rowString}|`)
         })
-        console.log(`\\${horizontalLine}/`)
+        console.log(` \\${horizontalLine}/`)
     }
     if(local.username!=='' || room!=='') {
         console.log()
