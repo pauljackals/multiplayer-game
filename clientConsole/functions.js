@@ -27,7 +27,7 @@ const render = store => () => {
         const allReady = allPlaying.length && allPlaying.every(o => o.ready)
 
         const printUser = user => {
-            console.log(`${allReady ? (user.turn ? '>' : ' ') : (user.ready ? '✓' : 'X')} ${user.username} | ${user.score}p | ${'+'.repeat(user.tank.health)}${'-'.repeat(3-user.tank.health)} | ${'a'.repeat(user.tank.actions)}${'_'.repeat(3-user.tank.actions)} | r${user.tank.row},c${user.tank.column},${user.tank.rotation}`)
+            console.log(`${allReady ? (user.turn ? '>' : ' ') : (user.ready ? '✓' : 'X')} ${user.username} | ${user.score}p | ${'+'.repeat(user.tank.health)}${'-'.repeat(3-user.tank.health)} | ${'a'.repeat(user.tank.actions)}${'_'.repeat(3-user.tank.actions)} | r${user.tank.row},c${user.tank.column}`)
 
             if(user.next!==user.username) {
                 const nextUser = allPlaying.find(userNext => userNext.username===user.next)
