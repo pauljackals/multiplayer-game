@@ -7,7 +7,7 @@ const {
     SET_PLAYING_LOCAL,
     SET_TANK_LOCAL,
     SET_TANK_BOARD,
-    // SET_TURN_LOCAL,
+    SET_TURN_LOCAL,
     SET_PREVIOUS_NEXT_LOCAL,
     SET_FIRST_LOCAL,
     SET_READY_LOCAL
@@ -37,9 +37,9 @@ const setTankLocalAction = (row, column, rotation) => {
 const setTankBoardAction = (row, column, username) => {
     return {type: SET_TANK_BOARD, payload: {row, column, username}}
 }
-// const setTurnLocalAction = turn => {
-//     return {type: SET_TURN_LOCAL, payload: {turn}}
-// }
+const setTurnLocalAction = turn => {
+    return {type: SET_TURN_LOCAL, payload: {turn}}
+}
 const setPreviousNextLocalAction = (previous, next) => {
     return {type: SET_PREVIOUS_NEXT_LOCAL, payload: {previous, next}}
 }
@@ -49,6 +49,7 @@ const setFirstLocalAction = first => {
 const setReadyLocalAction = ready => {
     return {type: SET_READY_LOCAL, payload: {ready}}
 }
+
 module.exports={
     setRoomAction,
     setUsernameAction,
@@ -58,7 +59,7 @@ module.exports={
     setPlayingLocalAction,
     setTankLocalAction,
     setTankBoardAction,
-    // setTurnLocalAction,
+    setTurnLocalAction,
     setPreviousNextLocalAction,
     setFirstLocalAction,
     setReadyLocalAction

@@ -24,8 +24,10 @@ const render = store => () => {
         allSpectatingSorted.forEach(user => console.log(`  ${user.username}`))
         console.log("Playing:")
 
-        const printUser = (user) => {
-            console.log(`${user.ready ? '✓' : 'X'}  ${user.username} | ${user.score}p | ${'+'.repeat(user.tank.health)}${'-'.repeat(3-user.tank.health)} | ${'a'.repeat(user.tank.actions)}${'_'.repeat(3-user.tank.actions)} | r${user.tank.row},c${user.tank.column}`)
+        const allReady = allPlaying.length && allPlaying.every(o => o.ready)
+
+        const printUser = user => {
+            console.log(`${allReady ? (user.turn ? '>' : ' ') : (user.ready ? '✓' : 'X')} ${user.username} | ${user.score}p | ${'+'.repeat(user.tank.health)}${'-'.repeat(3-user.tank.health)} | ${'a'.repeat(user.tank.actions)}${'_'.repeat(3-user.tank.actions)} | r${user.tank.row},c${user.tank.column},${user.tank.rotation}`)
 
             if(user.next!==user.username) {
                 const nextUser = allPlaying.find(userNext => userNext.username===user.next)
@@ -46,10 +48,26 @@ const render = store => () => {
         console.log(local.board[0].reduce((accumulator, value, index) => `${accumulator}${index}`, ' '))
         const horizontalLine = local.board[0].reduce((accumulator) => `${accumulator}-`, '')
         console.log(`/${horizontalLine}\\`)
+        const isLineOfSight = (row, column) => {
+            const tank = local.tank
+            const rotation = tank.rotation
+            if(rotation===0) {
+                return row < tank.row && column===tank.column;
+
+            } else if (rotation===1){
+                return column > tank.column && row===tank.row;
+
+            } else if (rotation===2){
+                return row > tank.row && column===tank.column;
+
+            } else if (rotation===3){
+                return column < tank.column && row===tank.row;
+            }
+        }
         local.board.forEach((row, index) => {
-            const rowString = row.reduce((accumulator, field) => {
+            const rowString = row.reduce((accumulator, field, indexField) => {
                 if(field.tank===''){
-                    return `${accumulator} `
+                    return `${accumulator}${local.turn && isLineOfSight(index, indexField) ? '•' : ' '}`
                 } else {
                     const getArrow = (username) => {
                         const tankOwner = username===local.username ? local : online.find(user => user.username===username)

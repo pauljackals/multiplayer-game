@@ -10,7 +10,7 @@ const {
     setPlayingLocalAction,
     setTankLocalAction,
     setTankBoardAction,
-    // setTurnLocalAction,
+    setTurnLocalAction,
     setPreviousNextLocalAction,
     setFirstLocalAction,
     setReadyLocalAction
@@ -21,19 +21,13 @@ const {
     resetOnlineAction,
     setPlayingOnlineAction,
     setTankOnlineAction,
-    // setTurnOnlineAction,
+    setTurnOnlineAction,
     setFirstOnlineAction,
     setPreviousNextOnlineAction,
     setReadyOnlineAction
 } = require('./actions/actionsOnline')
 
-const arguments = process.argv.slice(2)
-if (arguments.length !== 1 && !process.env.HOST){
-    console.log('You must provide a broker address')
-    process.exit(1)
-}
-
-const hostAddress = arguments[0] ? arguments[0] : process.env.HOST
+const hostAddress = process.env.HOST
 
 const client = mqtt.connect(`mqtt://${hostAddress}`)
 
@@ -60,7 +54,7 @@ const getDataForPublish = user => ({
     playing: user.playing,
     tank: user.tank,
     score: user.score,
-    // turn: user.turn,
+    turn: user.turn,
     next: user.next,
     previous: user.previous,
     first: user.first,
@@ -137,6 +131,13 @@ client.on('message', (topic, message) => {
                 const properFunctionFirst = next===localUsername ? setFirstLocalAction : setFirstOnlineAction
                 store.dispatch(properFunctionFirst(true, next))
             }
+            if(userObject.turn && next!==messageUser) {
+                if(next===localUsername) {
+                    store.dispatch(setTurnLocalAction(true))
+                } else {
+                    store.dispatch(setTurnOnlineAction(true, next))
+                }
+            }
         }
         store.dispatch(removeUserAction(messageUser))
 
@@ -150,7 +151,6 @@ client.on('message', (topic, message) => {
             store.dispatch(setPlayingOnlineAction(true, messageUser))
             store.dispatch(setTankOnlineAction(messageJson.tank.row, messageJson.tank.column, messageJson.tank.rotation, messageUser))
             store.dispatch(setTankBoardAction(messageJson.tank.row, messageJson.tank.column, messageUser))
-            // store.dispatch(setTurnOnlineAction(messageJson.turn, user))
             store.dispatch(setFirstOnlineAction(messageJson.first, messageUser))
             store.dispatch(setPreviousNextOnlineAction(messageJson.previous, messageJson.next, messageUser))
             if(messageJson.next!==messageUser && messageJson.previous!==messageUser){
@@ -167,6 +167,33 @@ client.on('message', (topic, message) => {
     } else if (topicSplit[1]==='ready') {
         if(messageUser !== localUsername) {
             store.dispatch(setReadyOnlineAction(true, messageUser))
+            const all = [local, ...online]
+            const playing = all.filter(p => p.playing && p.username!==messageUser)
+            if(playing.every(p => p.ready)) {
+                const first = all.find(u => u.playing && u.first)
+                if(first.username===localUsername) {
+                    store.dispatch(setTurnLocalAction(true))
+
+                } else {
+                    store.dispatch(setTurnOnlineAction(true, first.username))
+                }
+            }
+        }
+    } else if (topicSplit[1]==='end') {
+        if(messageUser !== localUsername) {
+            store.dispatch(setTurnOnlineAction(false, messageUser))
+            if(local.previous===messageUser) {
+                store.dispatch(setTurnLocalAction(true))
+            } else {
+                const userObject = [local, ...online].find(u => u.username===messageUser)
+                store.dispatch(setTurnOnlineAction(true, userObject.next))
+            }
+        }
+    } else if (topicSplit[1]==='action') {
+        if(messageUser !== localUsername) {
+            const messageJson = JSON.parse(message)
+            store.dispatch(setTankOnlineAction(messageJson.row, messageJson.column, messageJson.rotation, messageUser))
+            store.dispatch(setTankBoardAction(messageJson.row, messageJson.column, messageUser))
         }
     }
     renderWithStore()
@@ -178,70 +205,6 @@ rl.on('line', async input => {
     const online = state.reducerOnline
     const room = local.room
     const username = local.username
-
-    // if(input==='/exit'){
-    //     if(room === ''){
-    //         rl.close()
-    //         client.end()
-    //         console.clear()
-    //         console.log("Stopping client...")
-    //         process.exit()
-    //
-    //     } else {
-    //         client.unsubscribe(`${topicPrefix}/+/${room}/#`)
-    //         store.dispatch(resetOnlineAction())
-    //         store.dispatch(resetLocalAction())
-    //         client.publish(`${topicPrefix}/leave/${room}/${username}`, '{}')
-    //     }
-    //     renderWithStore()
-    //
-    // } else if(input==='/join' && room===''){
-    //     joinRoom()
-    //
-    // } else if(input==='/play' && room!=='' && !local.playing) {
-    //
-    //     const getRandomIntInclusive = (min, max) => {
-    //         return Math.floor(Math.random() * (max - min + 1) + min)
-    //     }
-    //     const emptyFields = store.getState().reducerLocal.board.flat().filter(field => field.tank==='')
-    //     const chosenField = emptyFields[getRandomIntInclusive(0, emptyFields.length-1)]
-    //     const rotation = getRandomIntInclusive(0, 3)
-    //     // const turns = online.filter(user => user.playing).map(user => user.turn)
-    //     // const highestTurn = Math.max(-1, ...turns)
-    //     store.dispatch(setTankLocalAction(chosenField.indexRow, chosenField.indexColumn, rotation))
-    //     store.dispatch(setTankBoardAction(chosenField.indexRow, chosenField.indexColumn, username))
-    //     // store.dispatch(setTurnLocalAction(highestTurn+1))
-    //
-    //     const firstPlayer = online.find(user => user.playing && user.first)
-    //     const lastPlayer = firstPlayer===undefined ? undefined : online.find(user => user.username===firstPlayer.previous)
-    //     const [previous, next] = firstPlayer!==lastPlayer || (firstPlayer===lastPlayer && firstPlayer!==undefined) ? [lastPlayer.username, firstPlayer.username] : [username, username]
-    //     store.dispatch(setPreviousNextLocalAction(previous, next))
-    //     store.dispatch(setFirstLocalAction(firstPlayer===undefined))
-    //     if(firstPlayer===lastPlayer) {
-    //         if(firstPlayer!==undefined) {
-    //             store.dispatch(setPreviousNextOnlineAction(username, username, firstPlayer.username))
-    //         }
-    //     } else {
-    //         store.dispatch(setPreviousNextOnlineAction(username, undefined, firstPlayer.username))
-    //         store.dispatch(setPreviousNextOnlineAction(undefined, username, lastPlayer.username))
-    //     }
-    //     store.dispatch(setPlayingLocalAction(true))
-    //     client.publish(`${topicPrefix}/play/${room}/${username}`, JSON.stringify({
-    //         tank: {row: chosenField.indexRow, column: chosenField.indexColumn, rotation},
-    //         // turn: highestTurn+1,
-    //         first: firstPlayer===undefined,
-    //         previous,
-    //         next
-    //     }))
-    //     renderWithStore()
-    //
-    // } else if(input.length && input[0]!=='/' && room!==''){
-    //     store.dispatch(addMessageAction(username, input))
-    //     client.publish(`${topicPrefix}/message/${room}/${username}`, JSON.stringify({message: input}))
-    //     renderWithStore()
-    // } else {
-    //     renderWithStore()
-    // }
 
     if(room===''){
         if(input==='/exit'){
@@ -297,6 +260,59 @@ rl.on('line', async input => {
         } else if (input==='/ready' && local.playing && !local.ready && online.filter(o => o.playing).length) {
             store.dispatch(setReadyLocalAction(true))
             client.publish(`${topicPrefix}/ready/${room}/${username}`, '{}')
+
+            const playing = online.filter(p => p.playing)
+            if(playing.every(p => p.ready)) {
+                const first = [local, ...online].find(u => u.playing && u.first)
+                if(first.username===username) {
+                    store.dispatch(setTurnLocalAction(true))
+
+                } else {
+                    store.dispatch(setTurnOnlineAction(true, first.username))
+                }
+            }
+
+        } else if(input==='/end' && local.turn){
+            store.dispatch(setTurnLocalAction(false))
+            store.dispatch(setTurnOnlineAction(true, local.next))
+            client.publish(`${topicPrefix}/end/${room}/${username}`, '{}')
+
+        } else if(local.turn && (input==='/back' || input==='/forward')){
+            const tank = local.tank
+            const board = local.board
+            const boardSize = board.length
+
+            const forwardMultiplier = input==='/forward' ? 1 : -1
+            const forwardRotationMultiplier = tank.rotation===1 || tank.rotation===2 ? 1 : -1
+
+            const rowNew = tank.rotation%2===0 ?
+                tank.row + forwardMultiplier*forwardRotationMultiplier :
+                tank.row
+            const columnNew = tank.rotation%2===1 ?
+                tank.column + forwardMultiplier*forwardRotationMultiplier :
+                tank.column
+
+            if (rowNew>=0 && columnNew>=0 && rowNew<boardSize && columnNew<boardSize && board[rowNew][columnNew].tank==='') {
+                const newLocation = {
+                    rotation: tank.rotation,
+                    row: rowNew,
+                    column: columnNew
+                }
+                store.dispatch(setTankLocalAction(newLocation.row, newLocation.column, newLocation.rotation))
+                store.dispatch(setTankBoardAction(newLocation.row, newLocation.column, username))
+                client.publish(`${topicPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
+            }
+
+        } else if(local.turn && (input==='/left' || input==='/right')){
+            const tank = local.tank
+            const maxRotation = 4
+            const newLocation = {
+                rotation: input==='/right' ? (tank.rotation+1)%maxRotation : tank.rotation===0 ? maxRotation-1 : tank.rotation-1,
+                row: tank.row,
+                column: tank.column
+            }
+            store.dispatch(setTankLocalAction(newLocation.row, newLocation.column, newLocation.rotation))
+            client.publish(`${topicPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
 
         } else if(input.length && input[0]!=='/' && room!==''){
             store.dispatch(addMessageAction(username, input))
