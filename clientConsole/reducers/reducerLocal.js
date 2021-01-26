@@ -12,7 +12,8 @@ const {
     SET_FIRST_LOCAL,
     SET_READY_LOCAL,
     DECREMENT_ACTIONS_LOCAL,
-    RESET_ACTIONS_LOCAL
+    RESET_ACTIONS_LOCAL,
+    DECREMENT_HEALTH_LOCAL
 } = require('../types/typesLocal')
 
 const fieldInitial = {tank: ''}
@@ -131,7 +132,8 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
             )
             return {...state, board}
 
-        } case RESET_ACTIONS_LOCAL:
+        } case DECREMENT_HEALTH_LOCAL:
+        case RESET_ACTIONS_LOCAL:
         case DECREMENT_ACTIONS_LOCAL:
         case SET_TANK_LOCAL:
         case SET_TURN_LOCAL:

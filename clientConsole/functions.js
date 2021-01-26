@@ -67,7 +67,7 @@ const render = store => () => {
         local.board.forEach((row, index) => {
             const rowString = row.reduce((accumulator, field, indexField) => {
                 if(field.tank===''){
-                    return `${accumulator}${local.turn && isLineOfSight(index, indexField) ? '•' : ' '}`
+                    return `${accumulator}${local.turn && local.tank.actions>0 && isLineOfSight(index, indexField) ? '•' : ' '}`
                 } else {
                     const getArrow = (username) => {
                         const tankOwner = username===local.username ? local : online.find(user => user.username===username)

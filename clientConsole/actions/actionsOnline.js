@@ -9,7 +9,8 @@ const {
     SET_PREVIOUS_NEXT_ONLINE,
     SET_READY_ONLINE,
     DECREMENT_ACTIONS_ONLINE,
-    RESET_ACTIONS_ONLINE
+    RESET_ACTIONS_ONLINE,
+    DECREMENT_HEALTH_ONLINE
 } = require('../types/typesOnline')
 
 const addUserAction = user => {
@@ -45,6 +46,9 @@ const decrementActionsOnlineAction = username => {
 const resetActionsOnlineAction = (full, username) => {
     return {type: RESET_ACTIONS_ONLINE, payload: {full, username}}
 }
+const decrementHealthOnlineAction = username => {
+    return {type: DECREMENT_HEALTH_ONLINE, payload: {username}}
+}
 
 module.exports={
     addUserAction,
@@ -57,5 +61,6 @@ module.exports={
     setFirstOnlineAction,
     setReadyOnlineAction,
     decrementActionsOnlineAction,
-    resetActionsOnlineAction
+    resetActionsOnlineAction,
+    decrementHealthOnlineAction
 }

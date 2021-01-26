@@ -14,7 +14,8 @@ const {
     setFirstLocalAction,
     setReadyLocalAction,
     decrementActionsLocalAction,
-    resetActionsLocalAction
+    resetActionsLocalAction,
+    decrementHealthLocalAction
 } = require('./actions/actionsLocal')
 const {
     addUserAction,
@@ -27,7 +28,8 @@ const {
     setPreviousNextOnlineAction,
     setReadyOnlineAction,
     decrementActionsOnlineAction,
-    resetActionsOnlineAction
+    resetActionsOnlineAction,
+    decrementHealthOnlineAction
 } = require('./actions/actionsOnline')
 
 const hostAddress = process.env.HOST
@@ -53,17 +55,6 @@ const store = require('./store')
 const {render} = require('./functions')
 const renderWithStore = render(store)
 
-// const getDataForPublish = user => ({
-//     username: user.username,
-//     playing: user.playing,
-//     tank: user.tank,
-//     score: user.score,
-//     turn: user.turn,
-//     next: user.next,
-//     previous: user.previous,
-//     first: user.first,
-//     ready: user.ready
-// })
 const getDataForPublish = user => ({
     ...user,
     board: undefined,
@@ -99,15 +90,16 @@ client.on('message', (topic, message) => {
     const local = state.reducerLocal
     const online = state.reducerOnline
     const localUsername = local.username
+    const topicType = topicSplit[1]
     const messageUser = topicSplit[3]
 
-    if(topicSplit[1] === 'join'){
+    if(topicType === 'join'){
         if(messageUser !== localUsername) {
             store.dispatch(addUserAction(JSON.parse(message).user))
-            client.publish(topic.replace('join', 'info'), JSON.stringify({user: getDataForPublish(store.getState().reducerLocal)}))
+            client.publish(`${topicPrefix}/info/${topicSplit[2]}/${messageUser}`, JSON.stringify({user: getDataForPublish(store.getState().reducerLocal)}))
         }
 
-    } else if(topicSplit[1]==='info') {
+    } else if(topicType==='info') {
         if(messageUser === localUsername) {
             const messageUser = JSON.parse(message).user
             store.dispatch(addUserAction(messageUser))
@@ -116,7 +108,7 @@ client.on('message', (topic, message) => {
             }
         }
 
-    } else if(topicSplit[1]==='leave') {
+    } else if(topicType==='leave') {
         const userObject = online.find(userOnline => userOnline.username===messageUser)
         if(userObject && userObject.playing){
             store.dispatch(setTankBoardAction(-1, -1, messageUser))
@@ -148,11 +140,11 @@ client.on('message', (topic, message) => {
         }
         store.dispatch(removeUserAction(messageUser))
 
-    } else if(topicSplit[1]==='message') {
+    } else if(topicType==='message') {
         if(messageUser !== localUsername) {
             store.dispatch(addMessageAction(messageUser, JSON.parse(message).message))
         }
-    } else if(topicSplit[1]==='play') {
+    } else if(topicType==='play') {
         if(messageUser !== localUsername) {
             const messageJson = JSON.parse(message)
             store.dispatch(setPlayingOnlineAction(true, messageUser))
@@ -171,7 +163,7 @@ client.on('message', (topic, message) => {
                 }
             }
         }
-    } else if (topicSplit[1]==='ready') {
+    } else if (topicType==='ready') {
         if(messageUser !== localUsername) {
             store.dispatch(setReadyOnlineAction(true, messageUser))
             const all = [local, ...online]
@@ -186,7 +178,7 @@ client.on('message', (topic, message) => {
                 }
             }
         }
-    } else if (topicSplit[1]==='end') {
+    } else if (topicType==='end') {
         if(messageUser !== localUsername) {
             store.dispatch(setTurnOnlineAction(false, messageUser))
             if(local.previous===messageUser) {
@@ -198,12 +190,25 @@ client.on('message', (topic, message) => {
                 store.dispatch(resetActionsOnlineAction(true, userObject.next))
             }
         }
-    } else if (topicSplit[1]==='action') {
+    } else if (topicType==='action') {
         if(messageUser !== localUsername) {
             const messageJson = JSON.parse(message)
             store.dispatch(decrementActionsOnlineAction(messageUser))
             store.dispatch(setTankOnlineAction(messageJson.row, messageJson.column, messageJson.rotation, messageUser))
             store.dispatch(setTankBoardAction(messageJson.row, messageJson.column, messageUser))
+        }
+    } else if (topicType==='shoot') {
+        if(messageUser !== localUsername) {
+            const messageJson = JSON.parse(message)
+            const target = messageJson.target
+            store.dispatch(resetActionsOnlineAction(false, messageUser))
+            if(target.length) {
+                if(target===localUsername) {
+                    store.dispatch(decrementHealthLocalAction())
+                } else {
+                    store.dispatch(decrementHealthOnlineAction(target))
+                }
+            }
         }
     }
     renderWithStore()
@@ -289,8 +294,8 @@ rl.on('line', async input => {
 
             } else {
                 store.dispatch(setTurnLocalAction(false))
-                store.dispatch(setTurnOnlineAction(true, local.next))
-                store.dispatch(resetActionsOnlineAction(true, local.next))
+                store.dispatch(setTurnOnlineAction(true, next))
+                store.dispatch(resetActionsOnlineAction(true, next))
             }
             client.publish(`${topicPrefix}/end/${room}/${username}`, '{}')
 
@@ -332,6 +337,53 @@ rl.on('line', async input => {
             store.dispatch(decrementActionsLocalAction())
             store.dispatch(setTankLocalAction(newLocation.row, newLocation.column, newLocation.rotation))
             client.publish(`${topicPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
+
+        } else if (local.turn && local.tank.actions>0 && input==='/shoot') {
+            const tank = local.tank
+            const rotation = tank.rotation
+
+            const getTargets = () => {
+                const lineOfSightTargets = check => local.board.flat().filter(field => field.tank.length && check(field))
+                if(rotation===0) {
+                    return lineOfSightTargets(field =>
+                        field.indexRow<tank.row && field.indexColumn===tank.column
+                    )
+                } else if(rotation===1) {
+                    return lineOfSightTargets(field =>
+                        field.indexRow===tank.row && field.indexColumn>tank.column
+                    )
+                } else if(rotation===2) {
+                    return lineOfSightTargets(field =>
+                        field.indexRow>tank.row && field.indexColumn===tank.column
+                    )
+                } else if(rotation===3) {
+                    return lineOfSightTargets(field =>
+                        field.indexRow===tank.row && field.indexColumn<tank.column
+                    )
+                }
+            }
+
+            const targets = getTargets()
+
+            const getClosestTarget = () => {
+                const reduceTargets = check =>
+                    targets.reduce((closest, current) => check(closest, current) ? current : closest)
+                if (rotation===0) {
+                    return reduceTargets((closest, current) => closest.indexRow<current.indexRow)
+                } else if (rotation===1) {
+                    return reduceTargets((closest, current) => closest.indexColumn>current.indexColumn)
+                } else if (rotation===2) {
+                    return reduceTargets((closest, current) => closest.indexRow>current.indexRow)
+                } else if (rotation===3) {
+                    return reduceTargets((closest, current) => closest.indexColumn<current.indexColumn)
+                }
+            }
+            const finalTarget = targets.length > 1 ? getClosestTarget().tank : (targets.length ? targets[0].tank : '')
+            store.dispatch(resetActionsLocalAction(false))
+            if(finalTarget.length) {
+                store.dispatch(decrementHealthOnlineAction(finalTarget))
+            }
+            client.publish(`${topicPrefix}/shoot/${room}/${username}`, JSON.stringify({target: finalTarget}))
 
         } else if(input.length && input[0]!=='/' && room!==''){
             store.dispatch(addMessageAction(username, input))

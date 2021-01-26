@@ -11,7 +11,8 @@ const {
     SET_FIRST_LOCAL,
     SET_READY_LOCAL,
     DECREMENT_ACTIONS_LOCAL,
-    RESET_ACTIONS_LOCAL
+    RESET_ACTIONS_LOCAL,
+    DECREMENT_HEALTH_LOCAL
 } = require('../types/typesLocal')
 
 const setRoomAction = room => {
@@ -53,6 +54,9 @@ const decrementActionsLocalAction = () => {
 const resetActionsLocalAction = full => {
     return {type: RESET_ACTIONS_LOCAL, payload: {full}}
 }
+const decrementHealthLocalAction = () => {
+    return {type: DECREMENT_HEALTH_LOCAL}
+}
 
 module.exports={
     setRoomAction,
@@ -67,5 +71,6 @@ module.exports={
     setFirstLocalAction,
     setReadyLocalAction,
     decrementActionsLocalAction,
-    resetActionsLocalAction
+    resetActionsLocalAction,
+    decrementHealthLocalAction
 }

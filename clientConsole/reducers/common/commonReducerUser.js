@@ -6,7 +6,8 @@ const {
     SET_FIRST_LOCAL,
     SET_READY_LOCAL,
     DECREMENT_ACTIONS_LOCAL,
-    RESET_ACTIONS_LOCAL
+    RESET_ACTIONS_LOCAL,
+    DECREMENT_HEALTH_LOCAL
 } = require('../../types/typesLocal')
 const {
     SET_PLAYING_ONLINE,
@@ -16,7 +17,8 @@ const {
     SET_PREVIOUS_NEXT_ONLINE,
     SET_READY_ONLINE,
     DECREMENT_ACTIONS_ONLINE,
-    RESET_ACTIONS_ONLINE
+    RESET_ACTIONS_ONLINE,
+    DECREMENT_HEALTH_ONLINE
 } = require('../../types/typesOnline')
 
 const commonReducerUser = (state, action) => {
@@ -57,6 +59,11 @@ const commonReducerUser = (state, action) => {
         } case RESET_ACTIONS_ONLINE:
         case RESET_ACTIONS_LOCAL: {
             return {...state, tank: {...state.tank, actions: action.payload.full ? 3 : 0}}
+
+        } case DECREMENT_HEALTH_ONLINE:
+        case DECREMENT_HEALTH_LOCAL: {
+            const tank = state.tank
+            return {...state, tank: {...tank, health: tank.health-1}}
 
         } default: {
             return state
