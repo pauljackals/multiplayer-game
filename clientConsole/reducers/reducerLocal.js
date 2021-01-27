@@ -67,7 +67,7 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
                             {...chat, messages: [...chat.messages, message]} :
                             chat
                     ) :
-                    [{user: username, messages: [message]}]
+                    [...state.chat, {user: username, messages: [message]}]
             }
 
         } case ADD_POINTS_LOCAL:

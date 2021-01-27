@@ -36,7 +36,9 @@ const {
     addPointsOnlineAction
 } = require('./actions/actionsOnline')
 const {
-    setCurrentChatAction
+    setCurrentChatAction,
+    removeChatNotificationAction,
+    addChatNotificationAction
 } = require('./actions/actionsExtra')
 
 const hostAddress = process.env.HOST
@@ -103,6 +105,7 @@ client.on('message', (topic, message) => {
     const state = store.getState()
     const local = state.reducerLocal
     const online = state.reducerOnline
+    const extra = state.reducerExtra
     const localUsername = local.username
 
     if(topicSplit[1]==='room') {
@@ -259,6 +262,14 @@ client.on('message', (topic, message) => {
         const messageUser = topicSplit[3]
         const messageJson = JSON.parse(message)
         store.dispatch(addChatMessageAction(messageUser, messageJson.message, messageUser))
+        if(extra.currentChat!==messageUser) {
+            const remove = () => store.dispatch(removeChatNotificationAction(messageUser))
+            remove()
+            store.dispatch(addChatNotificationAction(messageUser, setTimeout(() => {
+                remove()
+                renderWithStore()
+            }, 5000)))
+        }
     }
     renderWithStore()
 })
@@ -272,10 +283,11 @@ rl.on('line', async input => {
     const username = local.username
     const canAct = local.playing && local.turn && local.tank.actions && local.tank.health
 
-    if(!extra.currentChat.length && /^\/chat \w+$/.test(input)){
+    if(/^\/chat \w+$/.test(input)){
         const target = input.split(' ')[1]
         if(target!==username) {
             store.dispatch(setCurrentChatAction(target))
+            store.dispatch(removeChatNotificationAction(target))
         }
 
     } else if (extra.currentChat.length) {

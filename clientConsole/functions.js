@@ -6,6 +6,11 @@ const render = store => () => {
     const extra = state.reducerExtra
     const room = local.room
 
+    if(extra.notifications.length){
+        extra.notifications.forEach(n => console.log(`*New message from ${n.user}*`))
+        console.log()
+    }
+
     if(local.username!=='' || room!=='') {
         console.log(`User: ${local.username}`)
     }
