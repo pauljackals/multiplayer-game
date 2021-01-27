@@ -12,7 +12,9 @@ const {
     SET_READY_LOCAL,
     DECREMENT_ACTIONS_LOCAL,
     RESET_ACTIONS_LOCAL,
-    DECREMENT_HEALTH_LOCAL
+    DECREMENT_HEALTH_LOCAL,
+    ADD_POINTS_LOCAL,
+    SET_WINNER
 } = require('../types/typesLocal')
 
 const setRoomAction = room => {
@@ -57,6 +59,12 @@ const resetActionsLocalAction = full => {
 const decrementHealthLocalAction = () => {
     return {type: DECREMENT_HEALTH_LOCAL}
 }
+const addPointsLocalAction = points => {
+    return {type: ADD_POINTS_LOCAL, payload: {points}}
+}
+const setWinnerAction = (username, score) => {
+    return {type: SET_WINNER, payload: {username, score}}
+}
 
 module.exports={
     setRoomAction,
@@ -72,5 +80,7 @@ module.exports={
     setReadyLocalAction,
     decrementActionsLocalAction,
     resetActionsLocalAction,
-    decrementHealthLocalAction
+    decrementHealthLocalAction,
+    addPointsLocalAction,
+    setWinnerAction
 }

@@ -7,7 +7,8 @@ const {
     SET_READY_LOCAL,
     DECREMENT_ACTIONS_LOCAL,
     RESET_ACTIONS_LOCAL,
-    DECREMENT_HEALTH_LOCAL
+    DECREMENT_HEALTH_LOCAL,
+    ADD_POINTS_LOCAL
 } = require('../../types/typesLocal')
 const {
     SET_PLAYING_ONLINE,
@@ -18,8 +19,40 @@ const {
     SET_READY_ONLINE,
     DECREMENT_ACTIONS_ONLINE,
     RESET_ACTIONS_ONLINE,
-    DECREMENT_HEALTH_ONLINE
+    DECREMENT_HEALTH_ONLINE,
+    ADD_POINTS_ONLINE
 } = require('../../types/typesOnline')
+
+const fieldInitial = {tank: ''}
+const generateBoard = side => Array(side).fill([]).map(
+    (row, indexRow) => Array(side).fill({}).map(
+        (field, indexColumn) => ({indexRow, indexColumn, ...fieldInitial})
+    )
+)
+const INITIAL_STATE = {
+    board: generateBoard(10),
+    playing: false,
+    tank: {
+        health: 3,
+        row: -1,
+        column: -1,
+        rotation: -1,
+        actions: 3
+    },
+    score: 0,
+    username: '',
+    room: '',
+    messages: [],
+    turn: false,
+    next: '',
+    previous: '',
+    first: true,
+    ready: false,
+    winner: {
+        username: '',
+        score: 0
+    }
+}
 
 const commonReducerUser = (state, action) => {
     switch (action.type) {
@@ -58,16 +91,24 @@ const commonReducerUser = (state, action) => {
 
         } case RESET_ACTIONS_ONLINE:
         case RESET_ACTIONS_LOCAL: {
-            return {...state, tank: {...state.tank, actions: action.payload.full ? 3 : 0}}
+            return {...state, tank: {...state.tank, actions: action.payload.full ? INITIAL_STATE.tank.actions : 0}}
 
         } case DECREMENT_HEALTH_ONLINE:
         case DECREMENT_HEALTH_LOCAL: {
             const tank = state.tank
             return {...state, tank: {...tank, health: tank.health-1}}
 
+        } case ADD_POINTS_ONLINE:
+        case ADD_POINTS_LOCAL: {
+            return {...state, score: state.score + action.payload.points}
+
         } default: {
             return state
         }
     }
 }
-module.exports = commonReducerUser
+module.exports = {
+    commonReducerUser,
+    fieldInitial,
+    INITIAL_STATE
+}

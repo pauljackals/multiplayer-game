@@ -10,7 +10,8 @@ const {
     SET_READY_ONLINE,
     DECREMENT_ACTIONS_ONLINE,
     RESET_ACTIONS_ONLINE,
-    DECREMENT_HEALTH_ONLINE
+    DECREMENT_HEALTH_ONLINE,
+    ADD_POINTS_ONLINE
 } = require('../types/typesOnline')
 
 const addUserAction = user => {
@@ -49,6 +50,9 @@ const resetActionsOnlineAction = (full, username) => {
 const decrementHealthOnlineAction = username => {
     return {type: DECREMENT_HEALTH_ONLINE, payload: {username}}
 }
+const addPointsOnlineAction = (points, username) => {
+    return {type: ADD_POINTS_ONLINE, payload: {points, username}}
+}
 
 module.exports={
     addUserAction,
@@ -62,5 +66,6 @@ module.exports={
     setReadyOnlineAction,
     decrementActionsOnlineAction,
     resetActionsOnlineAction,
-    decrementHealthOnlineAction
+    decrementHealthOnlineAction,
+    addPointsOnlineAction
 }

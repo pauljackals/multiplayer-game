@@ -45,47 +45,56 @@ const render = store => () => {
         local.messages.slice(-5).forEach(message => console.log(`  /${message.username}/ ${message.text}`))
 
         console.log()
-        console.log(local.board[0].reduce((accumulator, value, index) => `${accumulator}${index}`, '  '))
-        const horizontalLine = local.board[0].reduce((accumulator) => `${accumulator}-`, '')
-        console.log(` /${horizontalLine}\\`)
-        const isLineOfSight = (row, column) => {
-            const tank = local.tank
-            const rotation = tank.rotation
-            if(rotation===0) {
-                return row < tank.row && column===tank.column;
 
-            } else if (rotation===1){
-                return column > tank.column && row===tank.row;
+        if(!local.winner.username.length) {
+            console.log(local.board[0].reduce((accumulator, value, index) => `${accumulator}${index}`, '  '))
+            const horizontalLine = local.board[0].reduce((accumulator) => `${accumulator}-`, '')
+            console.log(` /${horizontalLine}\\`)
+            const isLineOfSight = (row, column) => {
+                const tank = local.tank
+                const rotation = tank.rotation
+                if(rotation===0) {
+                    return row < tank.row && column===tank.column;
 
-            } else if (rotation===2){
-                return row > tank.row && column===tank.column;
+                } else if (rotation===1){
+                    return column > tank.column && row===tank.row;
 
-            } else if (rotation===3){
-                return column < tank.column && row===tank.row;
-            }
-        }
-        local.board.forEach((row, index) => {
-            const rowString = row.reduce((accumulator, field, indexField) => {
-                if(field.tank===''){
-                    return `${accumulator}${local.turn && local.tank.actions>0 && isLineOfSight(index, indexField) ? '•' : ' '}`
-                } else {
-                    const getArrow = (username) => {
-                        const tankOwner = username===local.username ? local : online.find(user => user.username===username)
-                        const tank = tankOwner && tankOwner.tank
-                        const arrows = [
-                            // ['⇑', '⇗', '⇒', '⇘', '⇓', '⇙', '⇐', '⇖'],
-                            // ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'],
-                            ['⇑', '⇒', '⇓', '⇐'],
-                            ['↑', '→', '↓', '←']
-                        ]
-                        return tank ? arrows[username===local.username ? 0 : 1][tank.rotation] : '?'
-                    }
-                    return `${accumulator}${getArrow(field.tank)}`
+                } else if (rotation===2){
+                    return row > tank.row && column===tank.column;
+
+                } else if (rotation===3){
+                    return column < tank.column && row===tank.row;
                 }
-            }, '')
-            console.log(`${index}|${rowString}|`)
-        })
-        console.log(` \\${horizontalLine}/`)
+            }
+            local.board.forEach((row, index) => {
+                const rowString = row.reduce((accumulator, field, indexField) => {
+                    if(field.tank===''){
+                        return `${accumulator}${local.turn && local.tank.actions && local.tank.health && isLineOfSight(index, indexField) ? '•' : ' '}`
+                    } else {
+                        const getArrow = (username) => {
+                            const tankOwner = username===local.username ? local : online.find(user => user.username===username)
+                            const tank = tankOwner && tankOwner.tank
+                            const arrows = [
+                                // ['⇑', '⇗', '⇒', '⇘', '⇓', '⇙', '⇐', '⇖'],
+                                // ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'],
+                                ['⇑', '⇒', '⇓', '⇐'],
+                                ['↑', '→', '↓', '←']
+                            ]
+                            return tank ? (tank.health ? arrows[username===local.username ? 0 : 1][tank.rotation] : 'X') : '?'
+                        }
+                        return `${accumulator}${getArrow(field.tank)}`
+                    }
+                }, '')
+                console.log(`${index}|${rowString}|`)
+            })
+            console.log(` \\${horizontalLine}/`)
+            if(local.turn) {
+                console.log("*Your turn*")
+            }
+
+        } else {
+            console.log(`*${local.winner.username} won with a score of ${local.winner.score}*`)
+        }
     }
     if(local.username!=='' || room!=='') {
         console.log()
