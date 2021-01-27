@@ -39,9 +39,8 @@ const hostAddress = process.env.HOST
 
 const client = mqtt.connect(`mqtt://${hostAddress}`)
 
-client.on('error', error => {
+client.on('error', () => {
     console.clear()
-    console.log(error)
     console.log(`Can't connect to ${hostAddress}`)
     client.end()
     process.exit(1)
@@ -143,6 +142,23 @@ client.on('message', (topic, message) => {
             }
         }
         store.dispatch(removeUserAction(messageUser))
+        const currentState = store.getState()
+        const playing = [currentState.reducerLocal, ...currentState.reducerOnline].filter(p => p.playing)
+        if(currentState.reducerLocal.turn && !currentState.reducerOnline.filter(u => u.playing && u.ready).length) {
+            store.dispatch(setWinnerAction(localUsername, local.score))
+            store.dispatch(setTurnLocalAction(false))
+            store.dispatch(setReadyLocalAction(false))
+            store.dispatch(setPlayingLocalAction(false))
+            client.publish(`${topicPrefix}/win/${topicSplit[2]}/${localUsername}`, JSON.stringify({score: local.score}))
+
+        } else if (playing.length>1 && !playing.find(p => p.turn) && playing.every(p => p.ready)) {
+            const first = playing.find(u => u.first)
+            if(first.username===localUsername) {
+                store.dispatch(setTurnLocalAction(true))
+            } else {
+                store.dispatch(setTurnOnlineAction(true, first.username))
+            }
+        }
 
     } else if(topicType==='message' && notUserEcho) {
         store.dispatch(addMessageAction(messageUser, JSON.parse(message).message))
@@ -231,7 +247,7 @@ rl.on('line', async input => {
     const online = state.reducerOnline
     const room = local.room
     const username = local.username
-    const canAct = local.turn && local.tank.actions && local.tank.health
+    const canAct = local.playing && local.turn && local.tank.actions && local.tank.health
 
     if(room===''){
         if(input==='/exit'){
@@ -252,7 +268,7 @@ rl.on('line', async input => {
             store.dispatch(resetLocalAction())
             client.publish(`${topicPrefix}/leave/${room}/${username}`, '{}')
 
-        }  else if(input==='/play' && !local.playing && (!online.length || !online.every(o => o.ready))) {
+        }  else if(input==='/play' && !local.playing && (!online.length || !online.find(o => o.turn)) && !local.winner.username.length) {
             const getRandomIntInclusive = (min, max) => {
                 return Math.floor(Math.random() * (max - min + 1) + min)
             }

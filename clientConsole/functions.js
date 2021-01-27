@@ -24,10 +24,10 @@ const render = store => () => {
         allSpectatingSorted.forEach(user => console.log(`  ${user.username}`))
         console.log("Playing:")
 
-        const allReady = allPlaying.length && allPlaying.every(o => o.ready)
+        const gameInProgress = allPlaying.length && allPlaying.find(u => u.turn)
 
         const printUser = user => {
-            console.log(`${allReady ? (user.turn ? '>' : ' ') : (user.ready ? '✓' : 'X')} ${user.username} | ${user.score}p | ${'+'.repeat(user.tank.health)}${'-'.repeat(3-user.tank.health)} | ${'a'.repeat(user.tank.actions)}${'_'.repeat(3-user.tank.actions)} | r${user.tank.row},c${user.tank.column}`)
+            console.log(`${gameInProgress ? (user.turn ? '>' : ' ') : (user.ready ? '✓' : 'X')} ${user.username} | ${user.score}p | ${'+'.repeat(user.tank.health)}${'-'.repeat(3-user.tank.health)} | ${'a'.repeat(user.tank.actions)}${'_'.repeat(3-user.tank.actions)} | r${user.tank.row},c${user.tank.column}`)
 
             if(user.next!==user.username) {
                 const nextUser = allPlaying.find(userNext => userNext.username===user.next)
