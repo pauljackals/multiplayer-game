@@ -17,7 +17,8 @@ const {
     resetActionsLocalAction,
     decrementHealthLocalAction,
     addPointsLocalAction,
-    setWinnerAction
+    setWinnerAction,
+    addChatMessageAction
 } = require('./actions/actionsLocal')
 const {
     addUserAction,
@@ -34,6 +35,9 @@ const {
     decrementHealthOnlineAction,
     addPointsOnlineAction
 } = require('./actions/actionsOnline')
+const {
+    setCurrentChatAction
+} = require('./actions/actionsExtra')
 
 const hostAddress = process.env.HOST
 
@@ -52,6 +56,8 @@ const rl = readline.createInterface({
 })
 
 const topicPrefix = 'game'
+const topicRoomPrefix = `${topicPrefix}/room`
+const topicChatPrefix = `${topicPrefix}/chat`
 
 const store = require('./store')
 const {render} = require('./functions')
@@ -61,30 +67,36 @@ const getDataForPublish = user => ({
     ...user,
     board: undefined,
     room: undefined,
-    messages: undefined
+    messages: undefined,
+    chat: undefined
 })
 
 const askQuestion = async questionString => new Promise(resolve => {
     rl.question(questionString, resolve)
 })
 
-const joinRoom = async () => {
-    const username = store.getState().reducerLocal.username
-    const room = await askQuestion("Type room: ")
-    store.dispatch(setRoomAction(room))
-
-    client.subscribe(`${topicPrefix}/+/${room}/#`, () => {
-        client.publish(`${topicPrefix}/join/${room}/${username}`, JSON.stringify({user: getDataForPublish(store.getState().reducerLocal)}))
-    })
-}
-
 const start = async () => {
     console.clear()
-
     const username = await askQuestion("Type your username: ")
-    store.dispatch(setUsernameAction(username))
+    if(/^\w+$/.test(username)) {
+        return username
+    } else {
+        return await start()
+    }
 }
-start().then(() => renderWithStore())
+start().then(username => {
+    store.dispatch(setUsernameAction(username))
+    client.subscribe(`${topicChatPrefix}/${username}/#`)
+    renderWithStore()
+})
+
+const endTurn = local => {
+    const next = local.next
+    store.dispatch(setTurnLocalAction(false))
+    store.dispatch(setTurnOnlineAction(true, next))
+    store.dispatch(resetActionsOnlineAction(true, next))
+    client.publish(`${topicRoomPrefix}/end/${local.room}/${local.username}`, '{}')
+}
 
 client.on('message', (topic, message) => {
     const topicSplit = topic.split('/')
@@ -92,151 +104,161 @@ client.on('message', (topic, message) => {
     const local = state.reducerLocal
     const online = state.reducerOnline
     const localUsername = local.username
-    const topicType = topicSplit[1]
-    const messageUser = topicSplit[3]
-    const notUserEcho = messageUser!==localUsername
 
-    if(topicType === 'join' && notUserEcho){
-        store.dispatch(addUserAction(JSON.parse(message).user))
-        client.publish(`${topicPrefix}/info/${topicSplit[2]}/${messageUser}`, JSON.stringify({user: getDataForPublish(store.getState().reducerLocal)}))
+    if(topicSplit[1]==='room') {
+        const topicType = topicSplit[2]
+        const messageUser = topicSplit[4]
+        const notUserEcho = messageUser!==localUsername
 
-    } else if(topicType==='info' && !notUserEcho) {
-        const messageUser = JSON.parse(message).user
-        const winner = messageUser.winner
-        store.dispatch(addUserAction({...messageUser, winner: undefined}))
-        if(messageUser.playing) {
-            store.dispatch(setTankBoardAction(messageUser.tank.row, messageUser.tank.column, messageUser.username))
-        }
-        if(winner.username.length && winner.username!==local.winner.username) {
-            store.dispatch(setWinnerAction(winner.username, winner.score))
-        }
+        if(topicType === 'join' && notUserEcho){
+            store.dispatch(addUserAction(JSON.parse(message).user))
+            client.publish(`${topicRoomPrefix}/info/${topicSplit[3]}/${messageUser}`, JSON.stringify({user: getDataForPublish(store.getState().reducerLocal)}))
 
-    } else if(topicType==='leave') {
-        const userObject = online.find(userOnline => userOnline.username===messageUser)
-        if(userObject && userObject.playing){
-            store.dispatch(setTankBoardAction(-1, -1, messageUser))
-            const previous = userObject.previous
-            const next = userObject.next
-            const properFunctionPrevious = previous===localUsername ? setPreviousNextLocalAction : setPreviousNextOnlineAction
-            const properFunctionNext = next===localUsername ? setPreviousNextLocalAction : setPreviousNextOnlineAction
-            if(next===previous){
-                if(next!==messageUser){
-                    store.dispatch(properFunctionNext(next, next, next))
-                }
-            } else {
-                store.dispatch(properFunctionPrevious(undefined, next, previous))
-                store.dispatch(properFunctionNext(previous, undefined, next))
+        } else if(topicType==='info' && !notUserEcho) {
+            const messageUser = JSON.parse(message).user
+            const winner = messageUser.winner
+            store.dispatch(addUserAction({...messageUser, winner: undefined}))
+            if(messageUser.playing) {
+                store.dispatch(setTankBoardAction(messageUser.tank.row, messageUser.tank.column, messageUser.username))
             }
-            if(userObject.first && next!==messageUser) {
-                const properFunctionFirst = next===localUsername ? setFirstLocalAction : setFirstOnlineAction
-                store.dispatch(properFunctionFirst(true, next))
+            if(winner.username.length && winner.username!==local.winner.username) {
+                store.dispatch(setWinnerAction(winner.username, winner.score))
             }
-            if(userObject.turn && next!==messageUser) {
-                if(next===localUsername) {
-                    store.dispatch(setTurnLocalAction(true))
-                    store.dispatch(resetActionsLocalAction(true))
+
+        } else if(topicType==='leave') {
+            const userObject = online.find(userOnline => userOnline.username===messageUser)
+            if(userObject && userObject.playing){
+                store.dispatch(setTankBoardAction(-1, -1, messageUser))
+                const previous = userObject.previous
+                const next = userObject.next
+                const properFunctionPrevious = previous===localUsername ? setPreviousNextLocalAction : setPreviousNextOnlineAction
+                const properFunctionNext = next===localUsername ? setPreviousNextLocalAction : setPreviousNextOnlineAction
+                if(next===previous){
+                    if(next!==messageUser){
+                        store.dispatch(properFunctionNext(next, next, next))
+                    }
                 } else {
-                    store.dispatch(setTurnOnlineAction(true, next))
-                    store.dispatch(resetActionsOnlineAction(true, userObject.next))
+                    store.dispatch(properFunctionPrevious(undefined, next, previous))
+                    store.dispatch(properFunctionNext(previous, undefined, next))
+                }
+                if(userObject.first && next!==messageUser) {
+                    const properFunctionFirst = next===localUsername ? setFirstLocalAction : setFirstOnlineAction
+                    store.dispatch(properFunctionFirst(true, next))
+                }
+                if(userObject.turn && next!==messageUser) {
+                    if(next===localUsername) {
+                        store.dispatch(setTurnLocalAction(true))
+                        store.dispatch(resetActionsLocalAction(true))
+                    } else {
+                        store.dispatch(setTurnOnlineAction(true, next))
+                        store.dispatch(resetActionsOnlineAction(true, userObject.next))
+                    }
                 }
             }
-        }
-        store.dispatch(removeUserAction(messageUser))
-        const currentState = store.getState()
-        const playing = [currentState.reducerLocal, ...currentState.reducerOnline].filter(p => p.playing)
-        if(currentState.reducerLocal.turn && !currentState.reducerOnline.filter(u => u.playing && u.ready).length) {
-            store.dispatch(setWinnerAction(localUsername, local.score))
-            store.dispatch(setTurnLocalAction(false))
-            store.dispatch(setReadyLocalAction(false))
-            store.dispatch(setPlayingLocalAction(false))
-            client.publish(`${topicPrefix}/win/${topicSplit[2]}/${localUsername}`, JSON.stringify({score: local.score}))
+            store.dispatch(removeUserAction(messageUser))
+            const currentState = store.getState()
+            const playing = [currentState.reducerLocal, ...currentState.reducerOnline].filter(p => p.playing)
+            if(currentState.reducerLocal.turn && !currentState.reducerOnline.filter(u => u.playing && u.ready).length) {
+                store.dispatch(setWinnerAction(localUsername, local.score))
+                store.dispatch(setTurnLocalAction(false))
+                store.dispatch(setReadyLocalAction(false))
+                store.dispatch(setPlayingLocalAction(false))
+                client.publish(`${topicRoomPrefix}/win/${topicSplit[3]}/${localUsername}`, JSON.stringify({score: local.score}))
 
-        } else if (playing.length>1 && !playing.find(p => p.turn) && playing.every(p => p.ready)) {
-            const first = playing.find(u => u.first)
-            if(first.username===localUsername) {
+            } else if (playing.length>1 && !playing.find(p => p.turn) && playing.every(p => p.ready)) {
+                const first = playing.find(u => u.first)
+                if(first.username===localUsername) {
+                    store.dispatch(setTurnLocalAction(true))
+                } else {
+                    store.dispatch(setTurnOnlineAction(true, first.username))
+                }
+            }
+
+        } else if(topicType==='message' && notUserEcho) {
+            store.dispatch(addMessageAction(messageUser, JSON.parse(message).message))
+
+        } else if(topicType==='play' && notUserEcho) {
+            const messageJson = JSON.parse(message)
+            store.dispatch(setPlayingOnlineAction(true, messageUser))
+            store.dispatch(setTankOnlineAction(messageJson.tank.row, messageJson.tank.column, messageJson.tank.rotation, messageUser))
+            store.dispatch(setTankBoardAction(messageJson.tank.row, messageJson.tank.column, messageUser))
+            store.dispatch(setFirstOnlineAction(messageJson.first, messageUser))
+            store.dispatch(setPreviousNextOnlineAction(messageJson.previous, messageJson.next, messageUser))
+            if(messageJson.next!==messageUser && messageJson.previous!==messageUser){
+                const properFunctionPrevious = messageJson.previous===localUsername ? setPreviousNextLocalAction : setPreviousNextOnlineAction
+                const properFunctionNext = messageJson.next===localUsername ? setPreviousNextLocalAction : setPreviousNextOnlineAction
+                if(messageJson.next===messageJson.previous) {
+                    store.dispatch(properFunctionNext(messageUser, messageUser, messageJson.next))
+                } else {
+                    store.dispatch(properFunctionPrevious(undefined, messageUser, messageJson.previous))
+                    store.dispatch(properFunctionNext(messageUser, undefined, messageJson.next))
+                }
+            }
+
+        } else if (topicType==='ready' && notUserEcho) {
+            store.dispatch(setReadyOnlineAction(true, messageUser))
+            const playing = [local, ...store.getState().reducerOnline].filter(p => p.playing)
+            if(playing.every(p => p.ready)) {
+                const first = playing.find(u => u.first)
+                if(first.username===localUsername) {
+                    store.dispatch(setTurnLocalAction(true))
+                } else {
+                    store.dispatch(setTurnOnlineAction(true, first.username))
+                }
+            }
+
+        } else if (topicType==='end' && notUserEcho) {
+            store.dispatch(setTurnOnlineAction(false, messageUser))
+            if(local.previous===messageUser) {
                 store.dispatch(setTurnLocalAction(true))
+                store.dispatch(resetActionsLocalAction(true))
+                if(!local.tank.health) {
+                    endTurn(store.getState().reducerLocal)
+                }
             } else {
-                store.dispatch(setTurnOnlineAction(true, first.username))
+                const userObject = [local, ...online].find(u => u.username===messageUser)
+                store.dispatch(setTurnOnlineAction(true, userObject.next))
+                store.dispatch(resetActionsOnlineAction(true, userObject.next))
             }
+
+        } else if (topicType==='action' && notUserEcho) {
+            const messageJson = JSON.parse(message)
+            store.dispatch(decrementActionsOnlineAction(messageUser))
+            store.dispatch(setTankOnlineAction(messageJson.row, messageJson.column, messageJson.rotation, messageUser))
+            store.dispatch(setTankBoardAction(messageJson.row, messageJson.column, messageUser))
+
+        } else if (topicType==='shoot' && notUserEcho) {
+            const messageJson = JSON.parse(message)
+            const target = messageJson.target
+            store.dispatch(resetActionsOnlineAction(false, messageUser))
+            if(target.length) {
+                if(target===localUsername) {
+                    store.dispatch(decrementHealthLocalAction())
+                } else {
+                    store.dispatch(decrementHealthOnlineAction(target))
+                }
+                if(messageJson.kill) {
+                    store.dispatch(addPointsOnlineAction(1, messageUser))
+                }
+            }
+        } else if (topicType==='win' && notUserEcho) {
+            const messageJson = JSON.parse(message)
+            store.dispatch(setWinnerAction(messageUser, messageJson.score))
+            if(local.playing) {
+                store.dispatch(setTurnLocalAction(false))
+                store.dispatch(setReadyLocalAction(false))
+                store.dispatch(setPlayingLocalAction(false))
+            }
+            online.filter(u => u.playing).forEach(user => {
+                store.dispatch(setTurnOnlineAction(false, user.username))
+                store.dispatch(setReadyOnlineAction(false, user.username))
+                store.dispatch(setPlayingOnlineAction(false, user.username))
+            })
         }
-
-    } else if(topicType==='message' && notUserEcho) {
-        store.dispatch(addMessageAction(messageUser, JSON.parse(message).message))
-
-    } else if(topicType==='play' && notUserEcho) {
+    } else if (topicSplit[1]==='chat') {
+        const messageUser = topicSplit[3]
         const messageJson = JSON.parse(message)
-        store.dispatch(setPlayingOnlineAction(true, messageUser))
-        store.dispatch(setTankOnlineAction(messageJson.tank.row, messageJson.tank.column, messageJson.tank.rotation, messageUser))
-        store.dispatch(setTankBoardAction(messageJson.tank.row, messageJson.tank.column, messageUser))
-        store.dispatch(setFirstOnlineAction(messageJson.first, messageUser))
-        store.dispatch(setPreviousNextOnlineAction(messageJson.previous, messageJson.next, messageUser))
-        if(messageJson.next!==messageUser && messageJson.previous!==messageUser){
-            const properFunctionPrevious = messageJson.previous===localUsername ? setPreviousNextLocalAction : setPreviousNextOnlineAction
-            const properFunctionNext = messageJson.next===localUsername ? setPreviousNextLocalAction : setPreviousNextOnlineAction
-            if(messageJson.next===messageJson.previous) {
-                store.dispatch(properFunctionNext(messageUser, messageUser, messageJson.next))
-            } else {
-                store.dispatch(properFunctionPrevious(undefined, messageUser, messageJson.previous))
-                store.dispatch(properFunctionNext(messageUser, undefined, messageJson.next))
-            }
-        }
-
-    } else if (topicType==='ready' && notUserEcho) {
-        store.dispatch(setReadyOnlineAction(true, messageUser))
-        const playing = [local, ...store.getState().reducerOnline].filter(p => p.playing)
-        if(playing.every(p => p.ready)) {
-            const first = playing.find(u => u.first)
-            if(first.username===localUsername) {
-                store.dispatch(setTurnLocalAction(true))
-            } else {
-                store.dispatch(setTurnOnlineAction(true, first.username))
-            }
-        }
-
-    } else if (topicType==='end' && notUserEcho) {
-        store.dispatch(setTurnOnlineAction(false, messageUser))
-        if(local.previous===messageUser) {
-            store.dispatch(setTurnLocalAction(true))
-            store.dispatch(resetActionsLocalAction(true))
-        } else {
-            const userObject = [local, ...online].find(u => u.username===messageUser)
-            store.dispatch(setTurnOnlineAction(true, userObject.next))
-            store.dispatch(resetActionsOnlineAction(true, userObject.next))
-        }
-
-    } else if (topicType==='action' && notUserEcho) {
-        const messageJson = JSON.parse(message)
-        store.dispatch(decrementActionsOnlineAction(messageUser))
-        store.dispatch(setTankOnlineAction(messageJson.row, messageJson.column, messageJson.rotation, messageUser))
-        store.dispatch(setTankBoardAction(messageJson.row, messageJson.column, messageUser))
-
-    } else if (topicType==='shoot' && notUserEcho) {
-        const messageJson = JSON.parse(message)
-        const target = messageJson.target
-        store.dispatch(resetActionsOnlineAction(false, messageUser))
-        if(target.length) {
-            if(target===localUsername) {
-                store.dispatch(decrementHealthLocalAction())
-            } else {
-                store.dispatch(decrementHealthOnlineAction(target))
-            }
-            if(messageJson.kill) {
-                store.dispatch(addPointsOnlineAction(1, messageUser))
-            }
-        }
-    } else if (topicType==='win' && notUserEcho) {
-        const messageJson = JSON.parse(message)
-        store.dispatch(setWinnerAction(messageUser, messageJson.score))
-        if(local.playing) {
-            store.dispatch(setTurnLocalAction(false))
-            store.dispatch(setReadyLocalAction(false))
-            store.dispatch(setPlayingLocalAction(false))
-        }
-        online.filter(u => u.playing).forEach(user => {
-            store.dispatch(setTurnOnlineAction(false, user.username))
-            store.dispatch(setReadyOnlineAction(false, user.username))
-            store.dispatch(setPlayingOnlineAction(false, user.username))
-        })
+        store.dispatch(addChatMessageAction(messageUser, messageJson.message, messageUser))
     }
     renderWithStore()
 })
@@ -245,28 +267,48 @@ rl.on('line', async input => {
     const state = store.getState()
     const local = state.reducerLocal
     const online = state.reducerOnline
+    const extra = state.reducerExtra
     const room = local.room
     const username = local.username
     const canAct = local.playing && local.turn && local.tank.actions && local.tank.health
 
-    if(room===''){
+    if(!extra.currentChat.length && /^\/chat \w+$/.test(input)){
+        const target = input.split(' ')[1]
+        if(target!==username) {
+            store.dispatch(setCurrentChatAction(target))
+        }
+
+    } else if (extra.currentChat.length) {
+        if(input==='/exit') {
+            store.dispatch(setCurrentChatAction(''))
+
+        } else if(input.length && input[0]!=='/'){
+            store.dispatch(addChatMessageAction(extra.currentChat, input, username))
+            client.publish(`${topicChatPrefix}/${extra.currentChat}/${username}`, JSON.stringify({message: input}))
+        }
+
+    } else if(!room.length){
         if(input==='/exit'){
             rl.close()
+            client.unsubscribe(`${topicChatPrefix}/${username}/#`)
             client.end()
             console.clear()
             console.log("Stopping client...")
             process.exit()
 
-        } else if(input==='/join') {
-            renderWithStore()
-            await joinRoom()
+        } else if(/^\/join \w+$/.test(input)) {
+            const room = input.split(' ')[1]
+            store.dispatch(setRoomAction(room))
+            client.subscribe(`${topicRoomPrefix}/+/${room}/#`, () => {
+                client.publish(`${topicRoomPrefix}/join/${room}/${username}`, JSON.stringify({user: getDataForPublish(store.getState().reducerLocal)}))
+            })
         }
-    } else {
+    } else if(room.length) {
         if(input==='/exit'){
-            client.unsubscribe(`${topicPrefix}/+/${room}/#`)
+            client.unsubscribe(`${topicRoomPrefix}/+/${room}/#`)
             store.dispatch(resetOnlineAction())
             store.dispatch(resetLocalAction())
-            client.publish(`${topicPrefix}/leave/${room}/${username}`, '{}')
+            client.publish(`${topicRoomPrefix}/leave/${room}/${username}`, '{}')
 
         }  else if(input==='/play' && !local.playing && (!online.length || !online.find(o => o.turn)) && !local.winner.username.length) {
             const getRandomIntInclusive = (min, max) => {
@@ -293,7 +335,7 @@ rl.on('line', async input => {
                 store.dispatch(setPreviousNextOnlineAction(undefined, username, lastPlayer.username))
             }
             store.dispatch(setPlayingLocalAction(true))
-            client.publish(`${topicPrefix}/play/${room}/${username}`, JSON.stringify({
+            client.publish(`${topicRoomPrefix}/play/${room}/${username}`, JSON.stringify({
                 tank: {row: chosenField.indexRow, column: chosenField.indexColumn, rotation},
                 first: firstPlayer===undefined,
                 previous,
@@ -302,7 +344,7 @@ rl.on('line', async input => {
 
         } else if (input==='/ready' && local.playing && !local.ready && online.filter(o => o.playing).length) {
             store.dispatch(setReadyLocalAction(true))
-            client.publish(`${topicPrefix}/ready/${room}/${username}`, '{}')
+            client.publish(`${topicRoomPrefix}/ready/${room}/${username}`, '{}')
 
             const playing = online.filter(p => p.playing)
             if(playing.every(p => p.ready)) {
@@ -316,16 +358,7 @@ rl.on('line', async input => {
             }
 
         } else if(input==='/end' && local.turn){
-            const next = local.next
-            if(next===username) {
-                store.dispatch(resetActionsLocalAction(true))
-
-            } else {
-                store.dispatch(setTurnLocalAction(false))
-                store.dispatch(setTurnOnlineAction(true, next))
-                store.dispatch(resetActionsOnlineAction(true, next))
-            }
-            client.publish(`${topicPrefix}/end/${room}/${username}`, '{}')
+            endTurn(local)
 
         } else if(canAct && (input==='/back' || input==='/forward')){
             const tank = local.tank
@@ -351,7 +384,11 @@ rl.on('line', async input => {
                 store.dispatch(decrementActionsLocalAction())
                 store.dispatch(setTankLocalAction(newLocation.row, newLocation.column, newLocation.rotation))
                 store.dispatch(setTankBoardAction(newLocation.row, newLocation.column, username))
-                client.publish(`${topicPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
+                client.publish(`${topicRoomPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
+
+                if(!store.getState().reducerLocal.tank.actions) {
+                    endTurn(local)
+                }
             }
 
         } else if(canAct && (input==='/left' || input==='/right')){
@@ -364,7 +401,11 @@ rl.on('line', async input => {
             }
             store.dispatch(decrementActionsLocalAction())
             store.dispatch(setTankLocalAction(newLocation.row, newLocation.column, newLocation.rotation))
-            client.publish(`${topicPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
+            client.publish(`${topicRoomPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
+
+            if(!store.getState().reducerLocal.tank.actions) {
+                endTurn(local)
+            }
 
         } else if (canAct && input==='/shoot') {
             const tank = local.tank
@@ -419,7 +460,12 @@ rl.on('line', async input => {
             }
             const win = kill && store.getState().reducerOnline.filter(u => u.playing).every(u => !u.tank.health)
 
-            client.publish(`${topicPrefix}/shoot/${room}/${username}`, JSON.stringify({target: finalTarget, kill}))
+            client.publish(`${topicRoomPrefix}/shoot/${room}/${username}`, JSON.stringify({target: finalTarget, kill}))
+
+            if(!store.getState().reducerLocal.tank.actions) {
+                endTurn(local)
+            }
+
             if(win) {
                 const score = store.getState().reducerLocal.score
                 store.dispatch(setWinnerAction(username, score))
@@ -431,12 +477,12 @@ rl.on('line', async input => {
                     store.dispatch(setReadyOnlineAction(false, user.username))
                     store.dispatch(setPlayingOnlineAction(false, user.username))
                 })
-                client.publish(`${topicPrefix}/win/${room}/${username}`, JSON.stringify({score}))
+                client.publish(`${topicRoomPrefix}/win/${room}/${username}`, JSON.stringify({score}))
             }
 
-        } else if(input.length && input[0]!=='/' && room!==''){
+        } else if(input.length && input[0]!=='/'){
             store.dispatch(addMessageAction(username, input))
-            client.publish(`${topicPrefix}/message/${room}/${username}`, JSON.stringify({message: input}))
+            client.publish(`${topicRoomPrefix}/message/${room}/${username}`, JSON.stringify({message: input}))
         }
     }
     renderWithStore()

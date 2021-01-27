@@ -51,7 +51,8 @@ const INITIAL_STATE = {
     winner: {
         username: '',
         score: 0
-    }
+    },
+    chat: []
 }
 
 const commonReducerUser = (state, action) => {

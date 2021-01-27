@@ -15,36 +15,9 @@ const {
     RESET_ACTIONS_LOCAL,
     DECREMENT_HEALTH_LOCAL,
     ADD_POINTS_LOCAL,
-    SET_WINNER
+    SET_WINNER,
+    ADD_CHAT_MESSAGE
 } = require('../types/typesLocal')
-
-// const fieldInitial = {tank: ''}
-// const generateBoard = side => Array(side).fill([]).map(
-//     (row, indexRow) => Array(side).fill({}).map(
-//         (field, indexColumn) => ({indexRow, indexColumn, ...fieldInitial})
-//     )
-// )
-//
-// const INITIAL_STATE = {
-//     board: generateBoard(10),
-//     playing: false,
-//     tank: {
-//         health: 3,
-//         row: -1,
-//         column: -1,
-//         rotation: -1,
-//         actions: 3
-//     },
-//     score: 0,
-//     username: '',
-//     room: '',
-//     messages: [],
-//     turn: false,
-//     next: '',
-//     previous: '',
-//     first: true,
-//     ready: false
-// }
 
 const reducerLocal = (state=INITIAL_STATE, action) => {
     switch (action.type) {
@@ -77,6 +50,25 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
 
         } case SET_WINNER: {
             return {...state, winner: action.payload}
+
+        } case ADD_CHAT_MESSAGE: {
+            const payload = action.payload
+            const message = {
+                text: payload.message,
+                username: payload.messageAuthor
+            }
+            const username = payload.username
+            const chatExists = !!state.chat.find(chat => chat.user===username)
+            return {
+                ...state,
+                chat: chatExists ?
+                    state.chat.map(
+                        chat => chat.user===username ?
+                            {...chat, messages: [...chat.messages, message]} :
+                            chat
+                    ) :
+                    [{user: username, messages: [message]}]
+            }
 
         } case ADD_POINTS_LOCAL:
         case DECREMENT_HEALTH_LOCAL:

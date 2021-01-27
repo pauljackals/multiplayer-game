@@ -14,7 +14,8 @@ const {
     RESET_ACTIONS_LOCAL,
     DECREMENT_HEALTH_LOCAL,
     ADD_POINTS_LOCAL,
-    SET_WINNER
+    SET_WINNER,
+    ADD_CHAT_MESSAGE
 } = require('../types/typesLocal')
 
 const setRoomAction = room => {
@@ -65,6 +66,9 @@ const addPointsLocalAction = points => {
 const setWinnerAction = (username, score) => {
     return {type: SET_WINNER, payload: {username, score}}
 }
+const addChatMessageAction = (username, message, messageAuthor) => {
+    return {type: ADD_CHAT_MESSAGE, payload: {username, message, messageAuthor}}
+}
 
 module.exports={
     setRoomAction,
@@ -82,5 +86,6 @@ module.exports={
     resetActionsLocalAction,
     decrementHealthLocalAction,
     addPointsLocalAction,
-    setWinnerAction
+    setWinnerAction,
+    addChatMessageAction
 }
