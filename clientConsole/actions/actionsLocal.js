@@ -16,7 +16,10 @@ const {
     ADD_POINTS_LOCAL,
     SET_WINNER,
     ADD_CHAT_MESSAGE,
-    SET_INITIAL_POSITION
+    SET_INITIAL_POSITION,
+    SET_CANCEL_LOCAL,
+    SET_CANCEL_USER,
+    SET_VOTE_LOCAL
 } = require('../types/typesLocal')
 
 const setRoomAction = room => {
@@ -73,6 +76,15 @@ const addChatMessageAction = (username, message, messageAuthor) => {
 const setInitialPositionAction = (row, column, rotation) => {
     return {type: SET_INITIAL_POSITION, payload: {row, column, rotation}}
 }
+const setCancelLocalAction = cancel => {
+    return {type: SET_CANCEL_LOCAL, payload: {cancel}}
+}
+const setCancelUserAction = user => {
+    return {type: SET_CANCEL_USER, payload: {user}}
+}
+const setVoteLocalAction = vote => {
+    return {type: SET_VOTE_LOCAL, payload: {vote}}
+}
 
 module.exports={
     setRoomAction,
@@ -92,5 +104,8 @@ module.exports={
     addPointsLocalAction,
     setWinnerAction,
     addChatMessageAction,
-    setInitialPositionAction
+    setInitialPositionAction,
+    setCancelLocalAction,
+    setCancelUserAction,
+    setVoteLocalAction
 }

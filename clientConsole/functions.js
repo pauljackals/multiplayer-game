@@ -19,7 +19,8 @@ const render = store => () => {
         console.log("  /ready - shows you are ready")
         console.log("  /right, /left, /forward, /back - tank movements")
         console.log("  /shoot - shoots the cannon")
-        console.log("  /cancel - cancels current turn movements")
+        console.log("  /cancel - starts the move cancel voting")
+        console.log("  /yes, /no - votes")
         console.log("  /end - ends your turn")
         console.log("  <message> - sends message")
         console.log()
@@ -67,7 +68,30 @@ const render = store => () => {
         const gameInProgress = allPlaying.length && allPlaying.find(u => u.turn)
 
         const printUser = user => {
-            console.log(`${gameInProgress ? (user.turn ? '>' : ' ') : (user.ready ? '✓' : 'X')} ${user.username} | ${user.score}p | ${'+'.repeat(user.tank.health)}${'-'.repeat(3-user.tank.health)} | ${'a'.repeat(user.tank.actions)}${'_'.repeat(3-user.tank.actions)} | r${user.tank.row},c${user.tank.column}`)
+            const getPlayerSymbol = () => {
+                if(gameInProgress) {
+                    if(user.turn){
+                        return '>'
+                    } else {
+                        if(local.cancelUser.length) {
+                            if(user.vote===1) {
+                                return '✓'
+                            } else {
+                                return '?'
+                            }
+                        } else {
+                            return ' '
+                        }
+                    }
+                } else {
+                    if(user.ready) {
+                        return '✓'
+                    } else {
+                        return 'X'
+                    }
+                }
+            }
+            console.log(`${getPlayerSymbol()} ${user.username} | ${user.score}p | ${'+'.repeat(user.tank.health)}${'-'.repeat(3-user.tank.health)} | ${'a'.repeat(user.tank.actions)}${'_'.repeat(3-user.tank.actions)} | r${user.tank.row},c${user.tank.column}`)
 
             if(user.next!==user.username) {
                 const nextUser = allPlaying.find(userNext => userNext.username===user.next)
@@ -130,6 +154,13 @@ const render = store => () => {
             console.log(` \\${horizontalLine}/`)
             if(local.turn) {
                 console.log("*Your turn*")
+            }
+            if(local.cancelUser.length){
+                if(local.cancelUser===local.username) {
+                    console.log(`*Waiting for votes*`)
+                } else {
+                    console.log(`*${local.cancelUser} wants to cancel move*`)
+                }
             }
 
         } else {

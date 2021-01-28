@@ -11,7 +11,9 @@ const {
     DECREMENT_ACTIONS_ONLINE,
     RESET_ACTIONS_ONLINE,
     DECREMENT_HEALTH_ONLINE,
-    ADD_POINTS_ONLINE
+    ADD_POINTS_ONLINE,
+    SET_CANCEL_ONLINE,
+    SET_VOTE_ONLINE
 } = require('../types/typesOnline')
 
 const addUserAction = user => {
@@ -53,6 +55,12 @@ const decrementHealthOnlineAction = username => {
 const addPointsOnlineAction = (points, username) => {
     return {type: ADD_POINTS_ONLINE, payload: {points, username}}
 }
+const setCancelOnlineAction = (cancel, username) => {
+    return {type: SET_CANCEL_ONLINE, payload: {cancel, username}}
+}
+const setVoteOnlineAction = (vote, username) => {
+    return {type: SET_VOTE_ONLINE, payload: {vote, username}}
+}
 
 module.exports={
     addUserAction,
@@ -67,5 +75,7 @@ module.exports={
     decrementActionsOnlineAction,
     resetActionsOnlineAction,
     decrementHealthOnlineAction,
-    addPointsOnlineAction
+    addPointsOnlineAction,
+    setCancelOnlineAction,
+    setVoteOnlineAction
 }

@@ -19,7 +19,10 @@ const {
     addPointsLocalAction,
     setWinnerAction,
     addChatMessageAction,
-    setInitialPositionAction
+    setInitialPositionAction,
+    setCancelUserAction,
+    setCancelLocalAction,
+    setVoteLocalAction
 } = require('./actions/actionsLocal')
 const {
     addUserAction,
@@ -34,7 +37,9 @@ const {
     decrementActionsOnlineAction,
     resetActionsOnlineAction,
     decrementHealthOnlineAction,
-    addPointsOnlineAction
+    addPointsOnlineAction,
+    setVoteOnlineAction,
+    setCancelOnlineAction
 } = require('./actions/actionsOnline')
 const {
     setCurrentChatAction,
@@ -72,7 +77,9 @@ const getDataForPublish = user => ({
     board: undefined,
     room: undefined,
     messages: undefined,
-    chat: undefined
+    chat: undefined,
+    initialPosition: undefined,
+    cancelUser: undefined
 })
 
 const askQuestion = async questionString => new Promise(resolve => {
@@ -112,6 +119,28 @@ client.on('message', (topic, message) => {
     const extra = state.reducerExtra
     const localUsername = local.username
 
+    const stopVoting = messageUser => {
+        store.dispatch(setCancelUserAction(''))
+        store.dispatch(setCancelOnlineAction(false, messageUser))
+        store.dispatch(setCancelLocalAction(false))
+        const onlineVoting = store.getState().reducerOnline.filter(o => o.playing && o.vote)
+        onlineVoting.forEach(o => store.dispatch(setVoteOnlineAction(0, o.username)))
+        store.dispatch(setVoteLocalAction(0))
+    }
+    const checkVotes = () => {
+        if(local.cancelUser===localUsername) {
+            const othersVoting = store.getState().reducerOnline.filter(o => o.playing)
+            if(othersVoting.every(o => o.vote===1)) {
+                stopVoting(localUsername)
+                const initialPosition = local.initialPosition
+                store.dispatch(setTankLocalAction(initialPosition.row, initialPosition.column, initialPosition.rotation))
+                store.dispatch(setTankBoardAction(initialPosition.row, initialPosition.column, localUsername))
+                store.dispatch(resetActionsLocalAction(true))
+                client.publish(`${topicRoomPrefix}/success/${local.room}/${localUsername}`, JSON.stringify(initialPosition))
+            }
+        }
+    }
+
     if(topicSplit[1]==='room') {
         const topicType = topicSplit[2]
         const messageUser = topicSplit[4]
@@ -127,6 +156,9 @@ client.on('message', (topic, message) => {
             store.dispatch(addUserAction({...messageUser, winner: undefined}))
             if(messageUser.playing) {
                 store.dispatch(setTankBoardAction(messageUser.tank.row, messageUser.tank.column, messageUser.username))
+            }
+            if(messageUser.cancel) {
+                store.dispatch(setCancelUserAction(messageUser.username))
             }
             if(winner.username.length && winner.username!==local.winner.username) {
                 store.dispatch(setWinnerAction(winner.username, winner.score))
@@ -161,6 +193,9 @@ client.on('message', (topic, message) => {
                         store.dispatch(resetActionsOnlineAction(true, userObject.next))
                     }
                 }
+                if(messageUser===local.cancelUser) {
+                    stopVoting(messageUser)
+                }
             }
             store.dispatch(removeUserAction(messageUser))
             const currentState = store.getState()
@@ -179,6 +214,9 @@ client.on('message', (topic, message) => {
                 } else {
                     store.dispatch(setTurnOnlineAction(true, first.username))
                 }
+            }
+            if(local.cancelUser.length) {
+                checkVotes()
             }
 
         } else if(topicType==='message' && notUserEcho) {
@@ -229,12 +267,18 @@ client.on('message', (topic, message) => {
                 store.dispatch(setTurnOnlineAction(true, userObject.next))
                 store.dispatch(resetActionsOnlineAction(true, userObject.next))
             }
+            if(messageUser===local.cancelUser) {
+                stopVoting(messageUser)
+            }
 
         } else if (topicType==='action' && notUserEcho) {
             const messageJson = JSON.parse(message)
             store.dispatch(decrementActionsOnlineAction(messageUser))
             store.dispatch(setTankOnlineAction(messageJson.row, messageJson.column, messageJson.rotation, messageUser))
             store.dispatch(setTankBoardAction(messageJson.row, messageJson.column, messageUser))
+            if(messageUser===local.cancelUser) {
+                stopVoting(messageUser)
+            }
 
         } else if (topicType==='shoot' && notUserEcho) {
             const messageJson = JSON.parse(message)
@@ -250,6 +294,10 @@ client.on('message', (topic, message) => {
                     store.dispatch(addPointsOnlineAction(1, messageUser))
                 }
             }
+            if(messageUser===local.cancelUser) {
+                stopVoting(messageUser)
+            }
+
         } else if (topicType==='win' && notUserEcho) {
             const messageJson = JSON.parse(message)
             store.dispatch(setWinnerAction(messageUser, messageJson.score))
@@ -264,7 +312,21 @@ client.on('message', (topic, message) => {
                 store.dispatch(setPlayingOnlineAction(false, user.username))
             })
         } else if (topicType==='cancel' && notUserEcho) {
+            store.dispatch(setCancelUserAction(messageUser))
+            store.dispatch(setCancelOnlineAction(true, messageUser))
+
+        } else if (topicType==='vote' && notUserEcho) {
+            const agree = JSON.parse(message).agree
+            if(!agree) {
+                stopVoting(local.cancelUser)
+
+            } else{
+                store.dispatch(setVoteOnlineAction(1, messageUser))
+                checkVotes()
+            }
+        } else if (topicType==='success' && notUserEcho) {
             const messageJson = JSON.parse(message)
+            stopVoting(localUsername)
             store.dispatch(setTankOnlineAction(messageJson.row, messageJson.column, messageJson.rotation, messageUser))
             store.dispatch(setTankBoardAction(messageJson.row, messageJson.column, messageUser))
             store.dispatch(resetActionsOnlineAction(true, messageUser))
@@ -293,6 +355,15 @@ rl.on('line', async input => {
     const room = local.room
     const username = local.username
     const canAct = local.playing && local.turn && local.tank.actions && local.tank.health
+    const stopVoting = () => {
+        store.dispatch(setCancelUserAction(''))
+        store.dispatch(setCancelLocalAction(false))
+        const onlineVoting = online.filter(o => o.vote)
+        onlineVoting.forEach(o => store.dispatch(setVoteOnlineAction(0, o.username)))
+        if(local.vote) {
+            store.dispatch(setVoteLocalAction(0))
+        }
+    }
 
     if(!extra.help && input==='/help'){
         store.dispatch(setHelpAction(true))
@@ -401,6 +472,9 @@ rl.on('line', async input => {
 
         } else if(input==='/end' && local.turn){
             endTurn(local)
+            if(local.cancelUser.length) {
+                stopVoting()
+            }
 
         } else if(canAct && (input==='/back' || input==='/forward')){
             const tank = local.tank
@@ -431,6 +505,9 @@ rl.on('line', async input => {
                 if(!store.getState().reducerLocal.tank.actions) {
                     endTurn(local)
                 }
+                if(local.cancelUser.length) {
+                    stopVoting()
+                }
             }
 
         } else if(canAct && (input==='/left' || input==='/right')){
@@ -447,6 +524,9 @@ rl.on('line', async input => {
 
             if(!store.getState().reducerLocal.tank.actions) {
                 endTurn(local)
+            }
+            if(local.cancelUser.length) {
+                stopVoting()
             }
 
         } else if (canAct && input==='/shoot') {
@@ -507,6 +587,9 @@ rl.on('line', async input => {
             if(!store.getState().reducerLocal.tank.actions) {
                 endTurn(local)
             }
+            if(local.cancelUser.length) {
+                stopVoting()
+            }
 
             if(win) {
                 const score = store.getState().reducerLocal.score
@@ -522,12 +605,22 @@ rl.on('line', async input => {
                 client.publish(`${topicRoomPrefix}/win/${room}/${username}`, JSON.stringify({score}))
             }
 
-        } else if(canAct && local.tank.actions<3 && input==='/cancel'){
-            const initialPosition = local.initialPosition
-            store.dispatch(setTankLocalAction(initialPosition.row, initialPosition.column, initialPosition.rotation))
-            store.dispatch(setTankBoardAction(initialPosition.row, initialPosition.column, username))
-            store.dispatch(resetActionsLocalAction(true))
-            client.publish(`${topicRoomPrefix}/cancel/${room}/${username}`, JSON.stringify(initialPosition))
+        } else if(canAct && local.tank.actions<3 && !local.cancelUser.length && input==='/cancel'){
+            store.dispatch(setCancelLocalAction(true))
+            store.dispatch(setCancelUserAction(username))
+            client.publish(`${topicRoomPrefix}/cancel/${room}/${username}`, '{}')
+
+        } else if(local.playing && local.cancelUser.length && local.cancelUser!==username && !local.vote && (input==='/yes' || input==='/no')){
+            const agree = input==='/yes'
+            if(agree) {
+                store.dispatch(setVoteLocalAction(1))
+
+            } else {
+                stopVoting(local.cancelUser)
+            }
+            client.publish(`${topicRoomPrefix}/vote/${room}/${username}`, JSON.stringify({agree}))
+
+
 
         } else if(input.length && input[0]!=='/'){
             store.dispatch(addMessageAction(username, input))

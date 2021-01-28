@@ -12,7 +12,9 @@ const {
     DECREMENT_ACTIONS_ONLINE,
     RESET_ACTIONS_ONLINE,
     DECREMENT_HEALTH_ONLINE,
-    ADD_POINTS_ONLINE
+    ADD_POINTS_ONLINE,
+    SET_VOTE_ONLINE,
+    SET_CANCEL_ONLINE
 } = require('../types/typesOnline')
 
 const reducerOnline = (state=[], action) => {
@@ -26,7 +28,9 @@ const reducerOnline = (state=[], action) => {
         } case RESET_ONLINE: {
             return []
 
-        } case ADD_POINTS_ONLINE:
+        } case SET_CANCEL_ONLINE:
+        case SET_VOTE_ONLINE:
+        case ADD_POINTS_ONLINE:
         case DECREMENT_HEALTH_ONLINE:
         case RESET_ACTIONS_ONLINE:
         case DECREMENT_ACTIONS_ONLINE:

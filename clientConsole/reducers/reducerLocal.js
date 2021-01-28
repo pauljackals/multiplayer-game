@@ -17,7 +17,10 @@ const {
     ADD_POINTS_LOCAL,
     SET_WINNER,
     ADD_CHAT_MESSAGE,
-    SET_INITIAL_POSITION
+    SET_INITIAL_POSITION,
+    SET_CANCEL_LOCAL,
+    SET_VOTE_LOCAL,
+    SET_CANCEL_USER
 } = require('../types/typesLocal')
 
 const reducerLocal = (state=INITIAL_STATE, action) => {
@@ -74,7 +77,12 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
         } case SET_INITIAL_POSITION: {
             return {...state, initialPosition: action.payload}
 
-        } case ADD_POINTS_LOCAL:
+        } case SET_CANCEL_USER: {
+            return {...state, cancelUser: action.payload.user}
+
+        } case SET_CANCEL_LOCAL:
+        case SET_VOTE_LOCAL:
+        case ADD_POINTS_LOCAL:
         case DECREMENT_HEALTH_LOCAL:
         case RESET_ACTIONS_LOCAL:
         case DECREMENT_ACTIONS_LOCAL:

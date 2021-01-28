@@ -8,7 +8,9 @@ const {
     DECREMENT_ACTIONS_LOCAL,
     RESET_ACTIONS_LOCAL,
     DECREMENT_HEALTH_LOCAL,
-    ADD_POINTS_LOCAL
+    ADD_POINTS_LOCAL,
+    SET_CANCEL_LOCAL,
+    SET_VOTE_LOCAL
 } = require('../../types/typesLocal')
 const {
     SET_PLAYING_ONLINE,
@@ -20,7 +22,9 @@ const {
     DECREMENT_ACTIONS_ONLINE,
     RESET_ACTIONS_ONLINE,
     DECREMENT_HEALTH_ONLINE,
-    ADD_POINTS_ONLINE
+    ADD_POINTS_ONLINE,
+    SET_CANCEL_ONLINE,
+    SET_VOTE_ONLINE
 } = require('../../types/typesOnline')
 
 const fieldInitial = {tank: ''}
@@ -57,7 +61,10 @@ const INITIAL_STATE = {
         row: -1,
         column: -1,
         rotation: -1
-    }
+    },
+    cancelUser: '',
+    cancel: false,
+    vote: 0
 }
 
 const commonReducerUser = (state, action) => {
@@ -107,6 +114,14 @@ const commonReducerUser = (state, action) => {
         } case ADD_POINTS_ONLINE:
         case ADD_POINTS_LOCAL: {
             return {...state, score: state.score + action.payload.points}
+
+        } case SET_CANCEL_ONLINE:
+        case SET_CANCEL_LOCAL: {
+            return {...state, cancel: action.payload.cancel}
+
+        } case SET_VOTE_ONLINE:
+        case SET_VOTE_LOCAL: {
+            return {...state, vote: action.payload.vote}
 
         } default: {
             return state
