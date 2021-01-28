@@ -2,10 +2,11 @@ const {
     SET_CURRENT_CHAT,
     ADD_CHAT_NOTIFICATION,
     REMOVE_CHAT_NOTIFICATION,
-    SET_HELP
+    SET_HELP,
+    SET_CURRENT_USER
 } = require('../types/typesExtra')
 
-const reducerExtra = (state={currentChat: '', notifications: [], help: false}, action) => {
+const reducerExtra = (state={currentChat: '', notifications: [], help: false, currentUser: ''}, action) => {
     switch (action.type) {
         case SET_CURRENT_CHAT: {
             return {...state, currentChat: action.payload.user}
@@ -23,6 +24,9 @@ const reducerExtra = (state={currentChat: '', notifications: [], help: false}, a
 
         } case SET_HELP: {
             return {...state, help: action.payload.on}
+
+        } case SET_CURRENT_USER: {
+            return {...state, currentUser: action.payload.currentUser}
 
         } default: {
             return state

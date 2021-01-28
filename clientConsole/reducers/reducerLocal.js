@@ -23,13 +23,13 @@ const {
     SET_CANCEL_USER
 } = require('../types/typesLocal')
 
-const reducerLocal = (state=INITIAL_STATE, action) => {
+const reducerLocalSingle = (state, action) => {
     switch (action.type) {
         case SET_ROOM: {
             return {...state, room: action.payload.room}
 
-        } case SET_USERNAME: {
-            return {...state, username: action.payload.username}
+        // } case SET_USERNAME: {
+        //     return {...state, username: action.payload.username}
 
         } case RESET_LOCAL: {
             return {...INITIAL_STATE, username: state.username}
@@ -99,4 +99,41 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
         }
     }
 }
+
+const reducerLocal = (state={}, action) => {
+    switch (action.type) {
+        case SET_USERNAME: {
+            const username = action.payload.username
+            return {...state, [username]: {...INITIAL_STATE, username}}
+
+        } case SET_CANCEL_LOCAL:
+        case SET_VOTE_LOCAL:
+        case ADD_POINTS_LOCAL:
+        case DECREMENT_HEALTH_LOCAL:
+        case RESET_ACTIONS_LOCAL:
+        case DECREMENT_ACTIONS_LOCAL:
+        case SET_TANK_LOCAL:
+        case SET_TURN_LOCAL:
+        case SET_PREVIOUS_NEXT_LOCAL:
+        case SET_FIRST_LOCAL:
+        case SET_READY_LOCAL:
+        case SET_PLAYING_LOCAL:
+        case SET_CANCEL_USER:
+        case SET_INITIAL_POSITION:
+        case ADD_CHAT_MESSAGE:
+        case SET_WINNER:
+        case SET_TANK_BOARD:
+        case ADD_MESSAGE:
+        case RESET_LOCAL:
+        case SET_ROOM: {
+            // return state.map(user => user.username===action.payload.currentUser ? reducerLocalSingle(user, action) : user)
+            const currentUser = action.payload.currentUser
+            return {...state, [currentUser]: reducerLocalSingle(state[currentUser], action)}
+
+        } default: {
+            return state
+        }
+    }
+}
+
 module.exports = reducerLocal
