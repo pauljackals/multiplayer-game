@@ -52,9 +52,10 @@ const hostAddress = process.env.HOST
 
 const client = mqtt.connect(`mqtt://${hostAddress}`)
 
-client.on('error', () => {
+client.on('error', error => {
     console.clear()
-    console.log(`Can't connect to ${hostAddress}`)
+    console.log(`Connection error with ${hostAddress}`)
+    console.log(error)
     client.end()
     process.exit(1)
 })
