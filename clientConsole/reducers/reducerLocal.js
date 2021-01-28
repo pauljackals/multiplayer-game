@@ -16,7 +16,8 @@ const {
     DECREMENT_HEALTH_LOCAL,
     ADD_POINTS_LOCAL,
     SET_WINNER,
-    ADD_CHAT_MESSAGE
+    ADD_CHAT_MESSAGE,
+    SET_INITIAL_POSITION
 } = require('../types/typesLocal')
 
 const reducerLocal = (state=INITIAL_STATE, action) => {
@@ -69,6 +70,9 @@ const reducerLocal = (state=INITIAL_STATE, action) => {
                     ) :
                     [...state.chat, {user: username, messages: [message]}]
             }
+
+        } case SET_INITIAL_POSITION: {
+            return {...state, initialPosition: action.payload}
 
         } case ADD_POINTS_LOCAL:
         case DECREMENT_HEALTH_LOCAL:

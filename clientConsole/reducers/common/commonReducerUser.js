@@ -52,7 +52,12 @@ const INITIAL_STATE = {
         username: '',
         score: 0
     },
-    chat: []
+    chat: [],
+    initialPosition: {
+        row: -1,
+        column: -1,
+        rotation: -1
+    }
 }
 
 const commonReducerUser = (state, action) => {

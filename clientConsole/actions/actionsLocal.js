@@ -15,7 +15,8 @@ const {
     DECREMENT_HEALTH_LOCAL,
     ADD_POINTS_LOCAL,
     SET_WINNER,
-    ADD_CHAT_MESSAGE
+    ADD_CHAT_MESSAGE,
+    SET_INITIAL_POSITION
 } = require('../types/typesLocal')
 
 const setRoomAction = room => {
@@ -69,6 +70,9 @@ const setWinnerAction = (username, score) => {
 const addChatMessageAction = (username, message, messageAuthor) => {
     return {type: ADD_CHAT_MESSAGE, payload: {username, message, messageAuthor}}
 }
+const setInitialPositionAction = (row, column, rotation) => {
+    return {type: SET_INITIAL_POSITION, payload: {row, column, rotation}}
+}
 
 module.exports={
     setRoomAction,
@@ -87,5 +91,6 @@ module.exports={
     decrementHealthLocalAction,
     addPointsLocalAction,
     setWinnerAction,
-    addChatMessageAction
+    addChatMessageAction,
+    setInitialPositionAction
 }

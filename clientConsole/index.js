@@ -18,7 +18,8 @@ const {
     decrementHealthLocalAction,
     addPointsLocalAction,
     setWinnerAction,
-    addChatMessageAction
+    addChatMessageAction,
+    setInitialPositionAction
 } = require('./actions/actionsLocal')
 const {
     addUserAction,
@@ -215,6 +216,8 @@ client.on('message', (topic, message) => {
             if(local.previous===messageUser) {
                 store.dispatch(setTurnLocalAction(true))
                 store.dispatch(resetActionsLocalAction(true))
+                const tank = local.tank
+                store.dispatch(setInitialPositionAction(tank.row, tank.column, tank.rotation))
                 if(!local.tank.health) {
                     endTurn(store.getState().reducerLocal)
                 }
@@ -257,6 +260,11 @@ client.on('message', (topic, message) => {
                 store.dispatch(setReadyOnlineAction(false, user.username))
                 store.dispatch(setPlayingOnlineAction(false, user.username))
             })
+        } else if (topicType==='cancel' && notUserEcho) {
+            const messageJson = JSON.parse(message)
+            store.dispatch(setTankOnlineAction(messageJson.row, messageJson.column, messageJson.rotation, messageUser))
+            store.dispatch(setTankBoardAction(messageJson.row, messageJson.column, messageUser))
+            store.dispatch(resetActionsOnlineAction(true, messageUser))
         }
     } else if (topicSplit[1]==='chat') {
         const messageUser = topicSplit[3]
@@ -367,6 +375,8 @@ rl.on('line', async input => {
                 } else {
                     store.dispatch(setTurnOnlineAction(true, first.username))
                 }
+                const tank = local.tank
+                store.dispatch(setInitialPositionAction(tank.row, tank.column, tank.rotation))
             }
 
         } else if(input==='/end' && local.turn){
@@ -491,6 +501,13 @@ rl.on('line', async input => {
                 })
                 client.publish(`${topicRoomPrefix}/win/${room}/${username}`, JSON.stringify({score}))
             }
+
+        } else if(canAct && local.tank.actions<3 && input==='/cancel'){
+            const initialPosition = local.initialPosition
+            store.dispatch(setTankLocalAction(initialPosition.row, initialPosition.column, initialPosition.rotation))
+            store.dispatch(setTankBoardAction(initialPosition.row, initialPosition.column, username))
+            store.dispatch(resetActionsLocalAction(true))
+            client.publish(`${topicRoomPrefix}/cancel/${room}/${username}`, JSON.stringify(initialPosition))
 
         } else if(input.length && input[0]!=='/'){
             store.dispatch(addMessageAction(username, input))
