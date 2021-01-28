@@ -1,7 +1,8 @@
 const {
     SET_CURRENT_CHAT,
     ADD_CHAT_NOTIFICATION,
-    REMOVE_CHAT_NOTIFICATION
+    REMOVE_CHAT_NOTIFICATION,
+    SET_HELP
 } = require('../types/typesExtra')
 
 const setCurrentChatAction = user => {
@@ -13,9 +14,13 @@ const addChatNotificationAction = (user, timer) => {
 const removeChatNotificationAction = user => {
     return {type: REMOVE_CHAT_NOTIFICATION, payload:{user}}
 }
+const setHelpAction = on => {
+    return {type: SET_HELP, payload:{on}}
+}
 
 module.exports={
     setCurrentChatAction,
     addChatNotificationAction,
-    removeChatNotificationAction
+    removeChatNotificationAction,
+    setHelpAction
 }

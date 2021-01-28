@@ -39,7 +39,8 @@ const {
 const {
     setCurrentChatAction,
     removeChatNotificationAction,
-    addChatNotificationAction
+    addChatNotificationAction,
+    setHelpAction
 } = require('./actions/actionsExtra')
 
 const hostAddress = process.env.HOST
@@ -80,6 +81,8 @@ const askQuestion = async questionString => new Promise(resolve => {
 
 const start = async () => {
     console.clear()
+    console.log("'/help' lists the commands")
+    console.log()
     const username = await askQuestion("Type your username: ")
     if(/^\w+$/.test(username)) {
         return username
@@ -291,23 +294,40 @@ rl.on('line', async input => {
     const username = local.username
     const canAct = local.playing && local.turn && local.tank.actions && local.tank.health
 
+    if(!extra.help && input==='/help'){
+        store.dispatch(setHelpAction(true))
+        renderWithStore()
+        return
+
+    } else if(extra.help) {
+        if (input==='/exit') {
+            store.dispatch(setHelpAction(false))
+        }
+        renderWithStore()
+        return
+    }
+
     if(/^\/chat \w+$/.test(input)){
         const target = input.split(' ')[1]
         if(target!==username) {
             store.dispatch(setCurrentChatAction(target))
             store.dispatch(removeChatNotificationAction(target))
         }
-
+        renderWithStore()
+        return
     } else if (extra.currentChat.length) {
-        if(input==='/exit') {
+        if (input === '/exit') {
             store.dispatch(setCurrentChatAction(''))
 
-        } else if(input.length && input[0]!=='/'){
+        } else if (input.length && input[0] !== '/') {
             store.dispatch(addChatMessageAction(extra.currentChat, input, username))
             client.publish(`${topicChatPrefix}/${extra.currentChat}/${username}`, JSON.stringify({message: input}))
         }
+        renderWithStore()
+        return
+    }
 
-    } else if(!room.length){
+    if(!room.length){
         if(input==='/exit'){
             rl.close()
             client.unsubscribe(`${topicChatPrefix}/${username}/#`)
