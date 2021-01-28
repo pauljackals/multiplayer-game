@@ -46,7 +46,9 @@ const {
     removeChatNotificationAction,
     addChatNotificationAction,
     setHelpAction,
-    setCurrentUserAction
+    setCurrentUserAction,
+    clearNameCheckTimeoutIntervalAction,
+    setNameCheckTimeoutIntervalAction
 } = require('./actions/actionsExtra')
 
 const hostAddress = process.env.HOST
@@ -69,6 +71,7 @@ const rl = readline.createInterface({
 const topicPrefix = 'game'
 const topicRoomPrefix = `${topicPrefix}/room`
 const topicChatPrefix = `${topicPrefix}/chat`
+const topicNamePrefix = `${topicPrefix}/name`
 
 const store = require('./store')
 const storeWithUser = currentUser => {
@@ -87,7 +90,6 @@ const storeWithUser = currentUser => {
     }
 }
 const {render} = require('./functions')
-// const renderWithStore = render(store)
 const renderWithStore = currentUser => render(storeWithUser(currentUser))
 
 const getDataForPublish = user => ({
@@ -110,17 +112,26 @@ const start = async () => {
     console.log()
     const username = await askQuestion("Type your username: ")
     if(/^\w+$/.test(username)) {
-        return username
+        console.clear()
+        console.log('*Checking availability*')
+        client.subscribe(`${topicNamePrefix}/${username}/response`)
+        const interval = setInterval(() =>
+            client.publish(`${topicNamePrefix}/${username}/request`, '{}'),
+            10)
+        const timeout = setTimeout(() => {
+            store.dispatch(clearNameCheckTimeoutIntervalAction())
+            store.dispatch(setUsernameAction(username))
+            store.dispatch(setCurrentUserAction(username))
+            client.unsubscribe(`${topicNamePrefix}/${username}/response`)
+            client.subscribe([`${topicChatPrefix}/${username}/#`, `${topicNamePrefix}/${username}/request`])
+            renderWithStore(username)()
+        }, 1000)
+        store.dispatch(setNameCheckTimeoutIntervalAction(timeout, interval))
     } else {
-        return await start()
+        start()
     }
 }
-start().then(username => {
-    store.dispatch(setUsernameAction(username))
-    store.dispatch(setCurrentUserAction(username))
-    client.subscribe(`${topicChatPrefix}/${username}/#`)
-    renderWithStore(username)()
-})
+start()
 
 const endTurn = local => {
     const storeCurrentUser = store.getState().reducerExtra.currentUser
@@ -134,11 +145,19 @@ const endTurn = local => {
 }
 
 client.on('message', (topic, message) => {
+    const topicSplit = topic.split('/')
+
+    if (topicSplit[1]==='name' && topicSplit[3]==='response') {
+        client.unsubscribe(topic)
+        store.dispatch(clearNameCheckTimeoutIntervalAction())
+        start()
+        return
+    }
+
     const storeCurrentUser = store.getState().reducerExtra.currentUser
     const storeTest = storeWithUser(storeCurrentUser)
     const renderWithStoreTest = renderWithStore(storeCurrentUser)
 
-    const topicSplit = topic.split('/')
     const state = storeTest.getState()
     const local = state.reducerLocal
     const online = state.reducerOnline
@@ -369,12 +388,20 @@ client.on('message', (topic, message) => {
                 renderWithStoreTest()
             }, 5000)))
         }
+    } else if (topicSplit[1]==='name') {
+        client.publish(`${topicNamePrefix}/${localUsername}/response`, '{}')
+        return
     }
     renderWithStoreTest()
 })
-//const store = storeWithUser(store.getState().reducerExtra.currentUser)
+
 rl.on('line', async input => {
     const storeCurrentUser = store.getState().reducerExtra.currentUser
+    if(!storeCurrentUser.length) {
+        console.clear()
+        console.log('*Checking availability*')
+        return
+    }
     const storeTest = storeWithUser(storeCurrentUser)
     const renderWithStoreTest = renderWithStore(storeCurrentUser)
 
@@ -496,9 +523,9 @@ rl.on('line', async input => {
                 } else {
                     storeTest.dispatch(setTurnOnlineAction(true, first.username))
                 }
-                const tank = local.tank
-                storeTest.dispatch(setInitialPositionAction(tank.row, tank.column, tank.rotation))
             }
+            const tank = local.tank
+            storeTest.dispatch(setInitialPositionAction(tank.row, tank.column, tank.rotation))
 
         } else if(input==='/end' && local.turn){
             endTurn(local)
