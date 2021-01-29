@@ -45,12 +45,12 @@ const reducerExtra = require('./reducers/reducerExtra')
 
 const hostAddress = process.env.HOST
 
+console.clear()
 const client = mqtt.connect(`mqtt://${hostAddress}`)
 
-client.on('error', error => {
+client.on('error', () => {
     console.clear()
     console.log(`Connection error with ${hostAddress}`)
-    console.log(error)
     client.end()
     process.exit(1)
 })
@@ -88,14 +88,18 @@ const start = async () => {
     if(/^\w+$/.test(username)) {
         store.dispatch(setUsernameAction(username))
         store.dispatch(setCurrentUserAction(username))
-        const topics = [`${topicChatPrefix}/${username}/#`]
-        client.subscribe(topics, () => storeWithUser(store, username).dispatch(addTopicsAction(topics)))
+        const topic = `${topicChatPrefix}/${username}/#`
+        client.subscribe(topic, () => storeWithUser(store, username).dispatch(addTopicsAction([topic])))
         renderWithStore(username)()
     } else {
         start()
     }
 }
-start()
+
+client.on('connect', () => {
+    console.log(`Connected to MQTT broker (${hostAddress})`)
+    setTimeout(() => start(), 1000)
+})
 
 client.on('message', async (topic, message) => {
 
@@ -119,6 +123,10 @@ client.on('message', async (topic, message) => {
 
 rl.on('line', async input => {
     const storeCurrentUser = store.getState().reducerExtra.currentUser
+
+    if(!storeCurrentUser.length) {
+        return
+    }
 
     const storeLoaded = storeWithUser(store, storeCurrentUser)
     const renderWithStoreLoaded = renderWithStore(storeCurrentUser)
