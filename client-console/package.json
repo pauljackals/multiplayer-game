@@ -1,11 +1,10 @@
 {
-  "name": "logic",
+  "name": "client-console",
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
     "dotenv": "^8.2.0",
-    "mqtt": "^4.2.6",
-    "redux": "^4.0.5"
+    "mqtt": "^4.2.6"
   }
 }
