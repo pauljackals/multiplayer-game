@@ -64,7 +64,8 @@ const INITIAL_STATE = {
     },
     cancelUser: '',
     cancel: false,
-    vote: 0
+    vote: 0,
+    topics: []
 }
 
 const commonReducerUser = (state, action) => {

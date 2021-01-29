@@ -20,7 +20,9 @@ const {
     SET_INITIAL_POSITION,
     SET_CANCEL_LOCAL,
     SET_VOTE_LOCAL,
-    SET_CANCEL_USER
+    SET_CANCEL_USER,
+    ADD_TOPICS,
+    REMOVE_TOPICS
 } = require('../types/typesLocal')
 
 const reducerLocalSingle = (state, action) => {
@@ -28,11 +30,14 @@ const reducerLocalSingle = (state, action) => {
         case SET_ROOM: {
             return {...state, room: action.payload.room}
 
-        // } case SET_USERNAME: {
-        //     return {...state, username: action.payload.username}
-
         } case RESET_LOCAL: {
-            return {...INITIAL_STATE, username: state.username}
+            return {
+                ...INITIAL_STATE,
+                username: state.username,
+                messages: state.messages,
+                chat: state.chat,
+                topics: state.topics
+            }
 
         } case ADD_MESSAGE: {
             return {...state, messages: [...state.messages, action.payload.message]}
@@ -80,6 +85,12 @@ const reducerLocalSingle = (state, action) => {
         } case SET_CANCEL_USER: {
             return {...state, cancelUser: action.payload.user}
 
+        } case ADD_TOPICS: {
+            return {...state, topics: [...state.topics, ...action.payload.topics]}
+
+        } case REMOVE_TOPICS: {
+            return {...state, topics: state.topics.filter(topic => !action.payload.topics.includes(topic))}
+
         } case SET_CANCEL_LOCAL:
         case SET_VOTE_LOCAL:
         case ADD_POINTS_LOCAL:
@@ -106,7 +117,9 @@ const reducerLocal = (state={}, action) => {
             const username = action.payload.username
             return {...state, [username]: {...INITIAL_STATE, username}}
 
-        } case SET_CANCEL_LOCAL:
+        } case REMOVE_TOPICS:
+        case ADD_TOPICS:
+        case SET_CANCEL_LOCAL:
         case SET_VOTE_LOCAL:
         case ADD_POINTS_LOCAL:
         case DECREMENT_HEALTH_LOCAL:
@@ -126,7 +139,6 @@ const reducerLocal = (state={}, action) => {
         case ADD_MESSAGE:
         case RESET_LOCAL:
         case SET_ROOM: {
-            // return state.map(user => user.username===action.payload.currentUser ? reducerLocalSingle(user, action) : user)
             const currentUser = action.payload.currentUser
             return {...state, [currentUser]: reducerLocalSingle(state[currentUser], action)}
 

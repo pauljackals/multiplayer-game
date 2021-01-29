@@ -19,7 +19,9 @@ const {
     SET_INITIAL_POSITION,
     SET_CANCEL_LOCAL,
     SET_CANCEL_USER,
-    SET_VOTE_LOCAL
+    SET_VOTE_LOCAL,
+    ADD_TOPICS,
+    REMOVE_TOPICS
 } = require('../types/typesLocal')
 
 const setRoomAction = room => {
@@ -85,6 +87,12 @@ const setCancelUserAction = user => {
 const setVoteLocalAction = vote => {
     return {type: SET_VOTE_LOCAL, payload: {vote}}
 }
+const addTopicsAction = topics => {
+    return {type: ADD_TOPICS, payload: {topics}}
+}
+const removeTopicsAction = topics => {
+    return {type: REMOVE_TOPICS, payload: {topics}}
+}
 
 module.exports={
     setRoomAction,
@@ -107,5 +115,7 @@ module.exports={
     setInitialPositionAction,
     setCancelLocalAction,
     setCancelUserAction,
-    setVoteLocalAction
+    setVoteLocalAction,
+    addTopicsAction,
+    removeTopicsAction
 }
