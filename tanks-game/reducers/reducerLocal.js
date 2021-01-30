@@ -34,7 +34,6 @@ const reducerLocalSingle = (state, action) => {
             return {
                 ...INITIAL_STATE,
                 username: state.username,
-                messages: state.messages,
                 chat: state.chat,
                 topics: state.topics
             }

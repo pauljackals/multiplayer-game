@@ -1,5 +1,103 @@
 .Room {
     border: 1px solid black;
     padding: 10px;
+    display: flex;
     width: fit-content;
+}
+.sidebar {
+    min-width: 400px;
+    margin-right: 50px;
+}
+.players {
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+.players td, .players th {
+    border: 1px solid black;
+}
+.bar {
+    display: inline-block;
+    width: 15px;
+    height: 10px;
+}
+.health {
+    background-color: red;
+}
+.action {
+    background-color: green;
+}
+.lost {
+    background-color: black;
+}
+.field {
+    width: 40px;
+    height: 40px;
+    border: 1px solid black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: darkgrey;
+}
+.field.you {
+    background-color: white;
+}
+.board {
+    display: grid;
+    grid-template-rows: repeat(10, 1fr);
+    grid-template-columns: repeat(10, 1fr);
+}
+.tank {
+    width: 20px;
+    height: 28px;
+    background-color: red;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+.tank.rotation-1 {
+    transform: rotate(90deg);
+}
+.tank.rotation-2 {
+    transform: rotate(180deg);
+}
+.tank.rotation-3 {
+    transform: rotate(270deg);
+}
+.tank.dead {
+    background-color: black;
+    width: 28px;
+}
+.cannon {
+    width: 4px;
+    height: 18px;
+    background-color: darkred;
+    margin-top: -4px;
+}
+.tank.dead .cannon {
+    display: none;
+}
+.messages li {
+    border: 1px solid black;
+    padding: 10px;
+    list-style: none;
+}
+.messages li.you {
+    background-color: lightsteelblue;
+}
+.messages li div {
+    border: 1px solid black;
+    padding: 5px;
+    word-wrap: anywhere;
+    max-width: 326px;
+}
+.messages li p {
+    font-style: italic;
+    margin: 0;
+}
+.messages {
+    overflow: hidden;
+    overflow-y: scroll;
+    height: 350px;
+    display: flex;
+    flex-direction: column-reverse;
 }

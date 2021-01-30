@@ -27,7 +27,7 @@ const Chat = ({local, setData}) => {
     const newChatHandle = async event => {
         event.preventDefault()
         const user = event.target.user.value
-        if(user.length) {
+        if(user.length && user!==local.username) {
             setCurrentChat(user)
             event.target.reset()
         }
@@ -50,7 +50,7 @@ const Chat = ({local, setData}) => {
                     <div className="user">
                         <p>{currentChat} <button onClick={() => setCurrentChat('')}>x</button></p>
                         <ul>
-                            {currentChatObject && currentChatObject.messages
+                            {currentChatObject && [...currentChatObject.messages].reverse()
                                 .map((message, index) => <li key={index} className={message.username===local.username ? 'you' : ''}>
                                     <p>{message.username}</p>
                                     <div>{message.text}</div>

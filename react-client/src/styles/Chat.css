@@ -1,43 +1,47 @@
-.Chat .users span {
+.users span {
     border: 1px solid black;
     margin: 5px;
     padding: 2px;
     cursor: pointer;
 }
-.Chat .users span.current {
+.users span.current {
     background-color: lightsteelblue;
 }
-.Chat .users {
-    /*border: 1px solid black;*/
+.users {
     padding: 10px;
     width: fit-content;
 }
-.Chat .user {
+.user {
     border: 1px solid black;
     width: fit-content;
 }
-.Chat .user li {
+.user ul {
+    overflow: hidden;
+    overflow-y: scroll;
+    height: 350px;
+    display: flex;
+    flex-direction: column-reverse;
+}
+.user li {
     border: 1px solid black;
     padding: 10px;
     list-style: none;
 }
-.Chat .user li.you {
+.user li.you {
     background-color: lightsteelblue;
 }
-.Chat .user li div {
+.user li div {
     border: 1px solid black;
+    padding: 5px;
 }
-.Chat .user li p {
+.user li p {
     font-style: italic;
     margin: 0;
 }
-.Chat .user li div {
-    padding: 5px;
-}
-.Chat .users form {
+.users form {
     margin-bottom: 10px;
 }
-.Chat .user > p {
+.user > p {
     padding: 5px;
 }
 .Chat {
