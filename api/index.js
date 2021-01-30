@@ -30,16 +30,11 @@ client.on('error', () => {
 const store = require('../tanks-game/store')()
 
 const {
-    setUsernameAction,
-    addTopicsAction
-} = require('../tanks-game/actions/actionsLocal')
-const {
     messageLogic,
-    storeWithUser
+    storeWithUser,
+    createUser,
+    sendChat
 } = require('../tanks-game/functions')
-const {
-    topicChatPrefix
-} = require('../tanks-game/prefixes')
 
 client.on('message',  (topic, message) => {
     messageLogic(client, store, topic, message)
@@ -48,19 +43,28 @@ client.on('message',  (topic, message) => {
 app.get('/:username', (req, res) => {
     const username = req.params.username
     const state = storeWithUser(store, username).getState()
-    if(Object.values(state).includes(undefined)) {
-        return res.status(404).json({})
-
-    } else {
-        return res.json(state)
-    }
+    const status = Object.values(state).includes(undefined) ? 404 : 200
+    return res.status(status).json(state)
 })
+
 app.post('/', (req, res) => {
     const username = req.body.username
-    store.dispatch(setUsernameAction(username))
-    const storeUser = storeWithUser(store, username)
-    const topic = `${topicChatPrefix}/${username}/#`
-    client.subscribe(topic)
-    storeUser.dispatch(addTopicsAction([topic]))
-    return res.json(storeUser.getState())
+    if(username===undefined || !/^\w+$/.test(username)) {
+        return res.status(422).json({})
+    }
+    createUser(client, store, username)
+    return res.status(201).json(storeWithUser(store, username).getState())
+})
+
+app.post('/:username/chat', (req, res) => {
+    const username = req.params.username
+    const body = req.body
+    const message = body.message
+    const user = body.user
+    if(user===undefined || !/^\w+$/.test(user) || message===undefined || !message.length) {
+        return res.status(422).json({})
+    }
+    const storeLoaded = storeWithUser(store, username)
+    sendChat(client, storeLoaded, username, user, message, username)
+    return res.status(201).json(storeLoaded.getState())
 })

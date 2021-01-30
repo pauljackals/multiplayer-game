@@ -1,0 +1,42 @@
+.Chat .users span {
+    border: 1px solid black;
+    margin: 5px;
+    padding: 2px;
+    cursor: pointer;
+}
+.Chat .users span.current {
+    background-color: lightsteelblue;
+}
+.Chat .users {
+    border: 1px solid black;
+    padding: 10px;
+    width: fit-content;
+}
+.Chat .user {
+    border: 1px solid black;
+    width: fit-content;
+}
+.Chat .user li {
+    border: 1px solid black;
+    padding: 10px;
+    list-style: none;
+}
+.Chat .user li.you {
+    background-color: lightsteelblue;
+}
+.Chat .user li div {
+    border: 1px solid black;
+}
+.Chat .user li p {
+    font-style: italic;
+    margin: 0;
+}
+.Chat .user li div {
+    padding: 5px;
+}
+.Chat .users form {
+    margin-bottom: 10px;
+}
+.Chat .user > p {
+    padding: 5px;
+}

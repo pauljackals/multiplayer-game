@@ -3,7 +3,6 @@ const readline = require('readline')
 const mqtt = require('mqtt')
 const {
     setRoomAction,
-    setUsernameAction,
     resetLocalAction,
     addMessageAction,
     setPlayingLocalAction,
@@ -17,7 +16,6 @@ const {
     resetActionsLocalAction,
     addPointsLocalAction,
     setWinnerAction,
-    addChatMessageAction,
     setInitialPositionAction,
     setCancelUserAction,
     setCancelLocalAction,
@@ -67,7 +65,9 @@ const {
     storeWithUser,
     messageLogic,
     endTurn,
-    getDataForPublish
+    getDataForPublish,
+    createUser,
+    sendChat
 } = require('../tanks-game/functions')
 const endTurnLoaded = local => endTurn(client,store, local)
 const {
@@ -86,10 +86,8 @@ const start = async () => {
     console.log()
     const username = await askQuestion("Type your username: ")
     if(/^\w+$/.test(username)) {
-        store.dispatch(setUsernameAction(username))
         store.dispatch(setCurrentUserAction(username))
-        const topic = `${topicChatPrefix}/${username}/#`
-        client.subscribe(topic, () => storeWithUser(store, username).dispatch(addTopicsAction([topic])))
+        createUser(client, store, username)
         renderWithStore(username)()
     } else {
         start()
@@ -174,8 +172,9 @@ rl.on('line', async input => {
             storeLoaded.dispatch(setCurrentChatAction(''))
 
         } else if (input.length && input[0] !== '/') {
-            storeLoaded.dispatch(addChatMessageAction(extra.currentChat, input, username))
-            client.publish(`${topicChatPrefix}/${extra.currentChat}/${username}`, JSON.stringify({message: input}))
+            // storeLoaded.dispatch(addChatMessageAction(extra.currentChat, input, username))
+            // client.publish(`${topicChatPrefix}/${extra.currentChat}/${username}`, JSON.stringify({message: input}))
+            sendChat(client, storeLoaded, username, extra.currentChat, input, username)
         }
         renderWithStoreLoaded()
         return

@@ -14,7 +14,9 @@ const {
     setInitialPositionAction,
     setCancelUserAction,
     setCancelLocalAction,
-    setVoteLocalAction
+    setVoteLocalAction,
+    setUsernameAction,
+    addTopicsAction
 } = require('../tanks-game/actions/actionsLocal')
 const {
     addUserAction,
@@ -32,7 +34,10 @@ const {
     setVoteOnlineAction,
     setCancelOnlineAction
 } = require('../tanks-game/actions/actionsOnline')
-const {topicRoomPrefix} = require('./prefixes')
+const {
+    topicRoomPrefix,
+    topicChatPrefix
+} = require('./prefixes')
 
 const getDataForPublish = user => ({
     ...user,
@@ -311,9 +316,23 @@ const endTurn = (client, store, local) => {
     client.publish(`${topicRoomPrefix}/end/${local.room}/${local.username}`, '{}')
 }
 
+const createUser = (client, store, username) => {
+    store.dispatch(setUsernameAction(username))
+    const storeLoaded = storeWithUser(store, username)
+    const topic = `${topicChatPrefix}/${username}/#`
+    client.subscribe(topic)
+    storeLoaded.dispatch(addTopicsAction([topic]))
+}
+const sendChat = (client, storeLoaded, username, target, message, sender) => {
+    storeLoaded.dispatch(addChatMessageAction(target, message, sender))
+    client.publish(`${topicChatPrefix}/${target}/${username}`, JSON.stringify({message}))
+}
+
 module.exports= {
     messageLogic,
     storeWithUser,
     endTurn,
-    getDataForPublish
+    getDataForPublish,
+    createUser,
+    sendChat
 }
