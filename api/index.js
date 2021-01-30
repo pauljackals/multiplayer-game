@@ -35,7 +35,8 @@ const {
     createUser,
     sendChat,
     joinRoom,
-    leaveRoom
+    leaveRoom,
+    sendRoomMessage
 } = require('../tanks-game/functions')
 
 client.on('message',  async (topic, message) => {
@@ -63,7 +64,7 @@ app.post('/:username/chat', (req, res) => {
     const body = req.body
     const message = body.message
     const user = body.user
-    if(!/^\w+$/.test(user) || typeof message !== 'string' || !message.length) {
+    if(typeof user !== 'string' || !/^\w+$/.test(user) || typeof message !== 'string' || !message.length) {
         return res.status(422).json({})
     }
     const storeLoaded = storeWithUser(store, username)
@@ -87,4 +88,16 @@ app.patch('/:username/leave', async (req, res) => {
     const storeLoaded = storeWithUser(store, username)
     await leaveRoom(client, storeLoaded, store.getState().reducerLocal)
     return res.json(storeLoaded.getState())
+})
+
+app.post('/:username/message', (req, res) => {
+    const username = req.params.username
+    const body = req.body
+    const message = body.message
+    if(typeof message !== 'string' || !message.length) {
+        return res.status(422).json({})
+    }
+    const storeLoaded = storeWithUser(store, username)
+    sendRoomMessage(client, storeLoaded, message)
+    return res.status(201).json(storeLoaded.getState())
 })

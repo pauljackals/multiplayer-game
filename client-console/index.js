@@ -2,7 +2,6 @@ require('dotenv').config()
 const readline = require('readline')
 const mqtt = require('mqtt')
 const {
-    addMessageAction,
     setPlayingLocalAction,
     setTankLocalAction,
     setTankBoardAction,
@@ -63,7 +62,8 @@ const {
     createUser,
     sendChat,
     joinRoom,
-    leaveRoom
+    leaveRoom,
+    sendRoomMessage
 } = require('../tanks-game/functions')
 const endTurnLoaded = local => endTurn(client,store, local)
 const {
@@ -406,8 +406,9 @@ rl.on('line', async input => {
 
 
         } else if(input.length && input[0]!=='/'){
-            storeLoaded.dispatch(addMessageAction(username, input))
-            client.publish(`${topicRoomPrefix}/message/${room}/${username}`, JSON.stringify({message: input}))
+            // storeLoaded.dispatch(addMessageAction(username, input))
+            // client.publish(`${topicRoomPrefix}/message/${room}/${username}`, JSON.stringify({message: input}))
+            sendRoomMessage(client, storeLoaded, input)
         }
     }
     renderWithStoreLoaded()

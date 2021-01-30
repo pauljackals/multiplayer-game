@@ -86,6 +86,23 @@ const Room = ({data, setData}) => {
         </div>
     )
 
+    const sendMessageHandle = async event => {
+        event.preventDefault()
+        const message = event.target.message.value
+        if(message.length && !waiting) {
+            setWaiting(true)
+            event.target.reset()
+            try {
+                const response = await axios.post(getApiUrl(`/${local.username}/message`), {message})
+                setData(response.data)
+            } catch (error) {
+                console.log(error.response ? error.response.status : 'No response from API')
+            } finally {
+                setWaiting(false)
+            }
+        }
+    }
+
     return (
         <div className="Room">
             {
@@ -99,12 +116,12 @@ const Room = ({data, setData}) => {
                             <h3>Room: {local.room}</h3>
                             <button onClick={leaveRoomHandle}>leave</button>
                             <h3>Spectating:</h3>
-                            <ul>
+                            <ul className="spectators">
                                 {[...spectating].sort(
                                     (user1, user2) => user1.username > user2.username ? 1
                                         : (user1.username < user2.username ? -1
                                             : 0)
-                                ).map((user, index) => <li key={index}>{user.username}</li>)}
+                                ).map((user, index) => <li key={index} className={user.username===local.username ? 'you' : ''}>{user.username}</li>)}
                             </ul>
                             <table className="players">
                                 <tbody>
@@ -142,6 +159,10 @@ const Room = ({data, setData}) => {
                                     </li>)
                                 }
                             </ul>
+                            <form onSubmit={sendMessageHandle}>
+                                <input name="message" placeholder="message"/>
+                                <input type="submit" value="send"/>
+                            </form>
                         </div>
                         {
                             local.winner.username.length ?

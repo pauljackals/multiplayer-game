@@ -358,6 +358,14 @@ const leaveRoom = (client, storeLoaded, localAll) => {
     client.publish(`${topicRoomPrefix}/leave/${room}/${username}`, '{}')
 }
 
+const sendRoomMessage = (client, storeLoaded, message) => {
+    const local = storeLoaded.getState().reducerLocal
+    const username = local.username
+    const room = local.room
+    storeLoaded.dispatch(addMessageAction(username, message))
+    client.publish(`${topicRoomPrefix}/message/${room}/${username}`, JSON.stringify({message}))
+}
+
 module.exports= {
     messageLogic,
     storeWithUser,
@@ -366,5 +374,6 @@ module.exports= {
     createUser,
     sendChat,
     joinRoom,
-    leaveRoom
+    leaveRoom,
+    sendRoomMessage
 }

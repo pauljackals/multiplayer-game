@@ -15,6 +15,13 @@
 .players td, .players th {
     border: 1px solid black;
 }
+.spectators li {
+    width: fit-content;
+    padding: 3px;
+}
+.spectators li.you {
+    background-color: lightsteelblue;
+}
 .bar {
     display: inline-block;
     width: 15px;

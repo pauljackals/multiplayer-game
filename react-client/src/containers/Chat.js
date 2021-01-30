@@ -9,9 +9,9 @@ const Chat = ({local, setData}) => {
 
     const sendMessageHandle = async event => {
         event.preventDefault()
-        if(!waiting) {
+        const message = event.target.message.value
+        if(message.length && !waiting) {
             setWaiting(true)
-            const message = event.target.message.value
             event.target.reset()
             try {
                 const response = await axios.post(getApiUrl(`/${local.username}/chat`), {user: currentChat, message})
