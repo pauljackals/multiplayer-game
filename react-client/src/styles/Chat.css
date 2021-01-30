@@ -8,7 +8,7 @@
     background-color: lightsteelblue;
 }
 .Chat .users {
-    border: 1px solid black;
+    /*border: 1px solid black;*/
     padding: 10px;
     width: fit-content;
 }
@@ -39,4 +39,9 @@
 }
 .Chat .user > p {
     padding: 5px;
+}
+.Chat {
+    border: 1px solid black;
+    width: fit-content;
+    padding: 10px;
 }

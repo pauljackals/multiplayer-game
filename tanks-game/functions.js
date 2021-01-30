@@ -16,7 +16,10 @@ const {
     setCancelLocalAction,
     setVoteLocalAction,
     setUsernameAction,
-    addTopicsAction
+    addTopicsAction,
+    setRoomAction,
+    removeTopicsAction,
+    resetLocalAction
 } = require('../tanks-game/actions/actionsLocal')
 const {
     addUserAction,
@@ -32,7 +35,8 @@ const {
     decrementHealthOnlineAction,
     addPointsOnlineAction,
     setVoteOnlineAction,
-    setCancelOnlineAction
+    setCancelOnlineAction,
+    resetOnlineAction
 } = require('../tanks-game/actions/actionsOnline')
 const {
     topicRoomPrefix,
@@ -323,9 +327,35 @@ const createUser = (client, store, username) => {
     client.subscribe(topic)
     storeLoaded.dispatch(addTopicsAction([topic]))
 }
-const sendChat = (client, storeLoaded, username, target, message, sender) => {
+const sendChat = (client, storeLoaded, target, message, sender) => {
+    const username = storeLoaded.getState().reducerLocal.username
     storeLoaded.dispatch(addChatMessageAction(target, message, sender))
     client.publish(`${topicChatPrefix}/${target}/${username}`, JSON.stringify({message}))
+}
+const joinRoom = (client, storeLoaded, localAll, room) => {
+    const username = storeLoaded.getState().reducerLocal.username
+    storeLoaded.dispatch(setRoomAction(room))
+    const topic = `${topicRoomPrefix}/+/${room}/#`
+    const howManySubscribed = Object.values(localAll).filter(user => user.topics.includes(topic)).length
+    if(!howManySubscribed) {
+        client.subscribe(topic)
+    }
+    storeLoaded.dispatch(addTopicsAction([topic]))
+    client.publish(`${topicRoomPrefix}/join/${room}/${username}`, JSON.stringify({user: getDataForPublish(storeLoaded.getState().reducerLocal)}))
+}
+const leaveRoom = (client, storeLoaded, localAll) => {
+    const local = storeLoaded.getState().reducerLocal
+    const room = local.room
+    const username = local.username
+    const topic = `${topicRoomPrefix}/+/${room}/#`
+    const howManySubscribed = Object.values(localAll).filter(user => user.topics.includes(topic)).length
+    if(howManySubscribed<=1) {
+        client.unsubscribe(topic)
+    }
+    storeLoaded.dispatch(removeTopicsAction([topic]))
+    storeLoaded.dispatch(resetOnlineAction())
+    storeLoaded.dispatch(resetLocalAction())
+    client.publish(`${topicRoomPrefix}/leave/${room}/${username}`, '{}')
 }
 
 module.exports= {
@@ -334,5 +364,7 @@ module.exports= {
     endTurn,
     getDataForPublish,
     createUser,
-    sendChat
+    sendChat,
+    joinRoom,
+    leaveRoom
 }

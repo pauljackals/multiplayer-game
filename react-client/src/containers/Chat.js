@@ -3,7 +3,7 @@ import '../styles/Chat.css'
 import axios from "axios";
 import {getApiUrl} from "../functions";
 
-const Chat = ({chat, user, setData}) => {
+const Chat = ({local, setData}) => {
     const [currentChat, setCurrentChat] = useState('')
     const [waiting, setWaiting] = useState(false)
 
@@ -14,7 +14,7 @@ const Chat = ({chat, user, setData}) => {
             const message = event.target.message.value
             event.target.reset()
             try {
-                const response = await axios.post(getApiUrl(`/${user}/chat`), {user: currentChat, message})
+                const response = await axios.post(getApiUrl(`/${local.username}/chat`), {user: currentChat, message})
                 setData(response.data)
             } catch (error) {
                 console.log(error.response ? error.response.status : 'No response from API')
@@ -33,7 +33,7 @@ const Chat = ({chat, user, setData}) => {
         }
     }
 
-    const currentChatObject = chat.find(c => c.user===currentChat)
+    const currentChatObject = local.chat.find(c => c.user===currentChat)
 
     return (
         <div className="Chat">
@@ -43,15 +43,15 @@ const Chat = ({chat, user, setData}) => {
                     <input name="user" placeholder="user"/>
                     <input type="submit" value="chat"/>
                 </form>
-                {chat.map(c => <span onClick={() => setCurrentChat(c.user)} key={c.user} className={c.user===currentChat ? 'current' : ''}>{c.user}</span>)}
+                {local.chat.map(c => <span onClick={() => setCurrentChat(c.user)} key={c.user} className={c.user===currentChat ? 'current' : ''}>{c.user}</span>)}
             </div>
             {
                 currentChat.length ?
                     <div className="user">
-                        <p>{currentChat}</p>
+                        <p>{currentChat} <button onClick={() => setCurrentChat('')}>x</button></p>
                         <ul>
                             {currentChatObject && currentChatObject.messages
-                                .map((message, index) => <li key={index} className={message.username===user ? 'you' : ''}>
+                                .map((message, index) => <li key={index} className={message.username===local.username ? 'you' : ''}>
                                     <p>{message.username}</p>
                                     <div>{message.text}</div>
                                 </li>)

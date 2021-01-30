@@ -4,6 +4,7 @@ import {
     getApiUrl
 } from "../functions";
 import Chat from "./Chat";
+import Room from "./Room";
 
 const Game = ({data, setData, user}) => {
 
@@ -22,11 +23,11 @@ const Game = ({data, setData, user}) => {
     }, [user, setData])
 
     const local = data.reducerLocal
-    const online = data.reducerOnline
     return (
         <div className="Game">
             <h3>User: {local.username}</h3>
-            <Chat user={user} chat={local.chat} setData={setData}/>
+            <Room data={data} setData={setData}/>
+            <Chat local={local} setData={setData}/>
         </div>
     )
 }

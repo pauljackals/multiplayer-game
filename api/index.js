@@ -33,11 +33,13 @@ const {
     messageLogic,
     storeWithUser,
     createUser,
-    sendChat
+    sendChat,
+    joinRoom,
+    leaveRoom
 } = require('../tanks-game/functions')
 
-client.on('message',  (topic, message) => {
-    messageLogic(client, store, topic, message)
+client.on('message',  async (topic, message) => {
+    await messageLogic(client, store, topic, message)
 })
 
 app.get('/:username', (req, res) => {
@@ -49,7 +51,7 @@ app.get('/:username', (req, res) => {
 
 app.post('/', (req, res) => {
     const username = req.body.username
-    if(username===undefined || !/^\w+$/.test(username)) {
+    if(typeof username !== 'string' || !/^\w+$/.test(username)) {
         return res.status(422).json({})
     }
     createUser(client, store, username)
@@ -61,10 +63,28 @@ app.post('/:username/chat', (req, res) => {
     const body = req.body
     const message = body.message
     const user = body.user
-    if(user===undefined || !/^\w+$/.test(user) || message===undefined || !message.length) {
+    if(!/^\w+$/.test(user) || typeof message !== 'string' || !message.length) {
         return res.status(422).json({})
     }
     const storeLoaded = storeWithUser(store, username)
-    sendChat(client, storeLoaded, username, user, message, username)
+    sendChat(client, storeLoaded, user, message, username)
     return res.status(201).json(storeLoaded.getState())
+})
+
+app.patch('/:username/join', (req, res) => {
+    const username = req.params.username
+    const room = req.body.room
+    if(typeof room !== 'string' || !/^\w+$/.test(room)) {
+        return res.status(422).json({})
+    }
+    const storeLoaded = storeWithUser(store, username)
+    joinRoom(client, storeLoaded, store.getState().reducerLocal, room)
+    return res.json(storeLoaded.getState())
+})
+
+app.patch('/:username/leave', async (req, res) => {
+    const username = req.params.username
+    const storeLoaded = storeWithUser(store, username)
+    await leaveRoom(client, storeLoaded, store.getState().reducerLocal)
+    return res.json(storeLoaded.getState())
 })

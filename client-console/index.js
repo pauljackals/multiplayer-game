@@ -2,8 +2,6 @@ require('dotenv').config()
 const readline = require('readline')
 const mqtt = require('mqtt')
 const {
-    setRoomAction,
-    resetLocalAction,
     addMessageAction,
     setPlayingLocalAction,
     setTankLocalAction,
@@ -19,12 +17,9 @@ const {
     setInitialPositionAction,
     setCancelUserAction,
     setCancelLocalAction,
-    setVoteLocalAction,
-    addTopicsAction,
-    removeTopicsAction
+    setVoteLocalAction
 } = require('../tanks-game/actions/actionsLocal')
 const {
-    resetOnlineAction,
     setPlayingOnlineAction,
     setTurnOnlineAction,
     setPreviousNextOnlineAction,
@@ -65,9 +60,10 @@ const {
     storeWithUser,
     messageLogic,
     endTurn,
-    getDataForPublish,
     createUser,
-    sendChat
+    sendChat,
+    joinRoom,
+    leaveRoom
 } = require('../tanks-game/functions')
 const endTurnLoaded = local => endTurn(client,store, local)
 const {
@@ -174,7 +170,7 @@ rl.on('line', async input => {
         } else if (input.length && input[0] !== '/') {
             // storeLoaded.dispatch(addChatMessageAction(extra.currentChat, input, username))
             // client.publish(`${topicChatPrefix}/${extra.currentChat}/${username}`, JSON.stringify({message: input}))
-            sendChat(client, storeLoaded, username, extra.currentChat, input, username)
+            sendChat(client, storeLoaded, extra.currentChat, input, username)
         }
         renderWithStoreLoaded()
         return
@@ -191,20 +187,22 @@ rl.on('line', async input => {
 
         } else if(/^\/join \w+$/.test(input)) {
             const room = input.split(' ')[1]
-            storeLoaded.dispatch(setRoomAction(room))
-            const topic = `${topicRoomPrefix}/+/${room}/#`
-            client.subscribe(topic, () => {
-                storeLoaded.dispatch(addTopicsAction([topic]))
-                client.publish(`${topicRoomPrefix}/join/${room}/${username}`, JSON.stringify({user: getDataForPublish(storeLoaded.getState().reducerLocal)}))
-            })
+            // storeLoaded.dispatch(setRoomAction(room))
+            // const topic = `${topicRoomPrefix}/+/${room}/#`
+            // client.subscribe(topic)
+            // storeLoaded.dispatch(addTopicsAction([topic]))
+            // client.publish(`${topicRoomPrefix}/join/${room}/${username}`, JSON.stringify({user: getDataForPublish(storeLoaded.getState().reducerLocal)}))
+            joinRoom(client, storeLoaded, store.getState().reducerLocal, room)
         }
     } else if(room.length) {
         if(input==='/exit'){
-            const topic = `${topicRoomPrefix}/+/${room}/#`
-            client.unsubscribe(topic, () => storeLoaded.dispatch(removeTopicsAction([topic])))
-            storeLoaded.dispatch(resetOnlineAction())
-            storeLoaded.dispatch(resetLocalAction())
-            client.publish(`${topicRoomPrefix}/leave/${room}/${username}`, '{}')
+            // const topic = `${topicRoomPrefix}/+/${room}/#`
+            // client.unsubscribe(topic)
+            // storeLoaded.dispatch(removeTopicsAction([topic]))
+            // storeLoaded.dispatch(resetOnlineAction())
+            // storeLoaded.dispatch(resetLocalAction())
+            // client.publish(`${topicRoomPrefix}/leave/${room}/${username}`, '{}')
+            leaveRoom(client, storeLoaded, store.getState().reducerLocal)
 
         }  else if(input==='/play' && !local.playing && (!online.length || !online.find(o => o.turn)) && !local.winner.username.length) {
             const getRandomIntInclusive = (min, max) => {
