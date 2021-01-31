@@ -3,12 +3,9 @@ const mqtt = require('mqtt')
 const express = require('express');
 const cors = require('cors');
 const app = express();
-// const users = require('./routes/users');
 
 app.use(cors())
 app.use(express.json());
-
-// app.use('/users', users);
 
 const port = process.env.PORT
 const hostAddress = process.env.HOST
@@ -36,7 +33,12 @@ const {
     sendChat,
     joinRoom,
     leaveRoom,
-    sendRoomMessage
+    sendRoomMessage,
+    play,
+    ready,
+    endPlayerTurn,
+    vote,
+    cancel
 } = require('../tanks-game/functions')
 
 client.on('message',  async (topic, message) => {
@@ -83,10 +85,10 @@ app.patch('/:username/join', (req, res) => {
     return res.json(storeLoaded.getState())
 })
 
-app.patch('/:username/leave', async (req, res) => {
+app.patch('/:username/leave',  (req, res) => {
     const username = req.params.username
     const storeLoaded = storeWithUser(store, username)
-    await leaveRoom(client, storeLoaded, store.getState().reducerLocal)
+    leaveRoom(client, storeLoaded, store.getState().reducerLocal)
     return res.json(storeLoaded.getState())
 })
 
@@ -100,4 +102,41 @@ app.post('/:username/message', (req, res) => {
     const storeLoaded = storeWithUser(store, username)
     sendRoomMessage(client, storeLoaded, message)
     return res.status(201).json(storeLoaded.getState())
+})
+
+app.patch('/:username/play', async (req, res) => {
+    const username = req.params.username
+    const storeLoaded = storeWithUser(store, username)
+    play(client, storeLoaded)
+    return res.json(storeLoaded.getState())
+})
+
+app.patch('/:username/ready', async (req, res) => {
+    const username = req.params.username
+    const storeLoaded = storeWithUser(store, username)
+    ready(client, storeLoaded)
+    return res.json(storeLoaded.getState())
+})
+
+app.patch('/:username/end', async (req, res) => {
+    const username = req.params.username
+    const storeLoaded = storeWithUser(store, username)
+    endPlayerTurn(client, storeLoaded)
+    return res.json(storeLoaded.getState())
+})
+app.patch('/:username/vote', async (req, res) => {
+    const username = req.params.username
+    const agree = req.body.agree
+    if(typeof agree !== 'boolean') {
+        return res.status(422).json({})
+    }
+    const storeLoaded = storeWithUser(store, username)
+    vote(client, storeLoaded, agree)
+    return res.json(storeLoaded.getState())
+})
+app.patch('/:username/cancel', async (req, res) => {
+    const username = req.params.username
+    const storeLoaded = storeWithUser(store, username)
+    cancel(client, storeLoaded)
+    return res.json(storeLoaded.getState())
 })

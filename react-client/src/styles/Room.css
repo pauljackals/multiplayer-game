@@ -3,6 +3,7 @@
     padding: 10px;
     display: flex;
     width: fit-content;
+    margin: 0;
 }
 .sidebar {
     min-width: 400px;
@@ -70,6 +71,9 @@
 .tank.rotation-3 {
     transform: rotate(270deg);
 }
+.field.you .tank:not(.dead) {
+    background-color: limegreen;
+}
 .tank.dead {
     background-color: black;
     width: 28px;
@@ -79,6 +83,9 @@
     height: 18px;
     background-color: darkred;
     margin-top: -4px;
+}
+.field.you .cannon {
+    background-color: darkgreen;
 }
 .tank.dead .cannon {
     display: none;
@@ -94,7 +101,7 @@
 .messages li div {
     border: 1px solid black;
     padding: 5px;
-    word-wrap: anywhere;
+    word-wrap: break-word;
     max-width: 326px;
 }
 .messages li p {

@@ -14,6 +14,7 @@
 .user {
     border: 1px solid black;
     width: fit-content;
+    min-width: 300px;
 }
 .user ul {
     overflow: hidden;
@@ -33,6 +34,8 @@
 .user li div {
     border: 1px solid black;
     padding: 5px;
+    max-width: 326px;
+    word-wrap: break-word;
 }
 .user li p {
     font-style: italic;

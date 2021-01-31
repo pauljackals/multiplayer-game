@@ -41,11 +41,11 @@ const Room = ({data, setData}) => {
             }
         }
     }
-    const leaveRoomHandle = async () => {
+    const commonButtonPatchHandle = async endpoint => {
         if(!waiting) {
             setWaiting(true)
             try {
-                const response = await axios.patch(getApiUrl(`/${local.username}/leave`))
+                const response = await axios.patch(getApiUrl(`/${local.username}/${endpoint}`))
                 setData(response.data)
             } catch (error) {
                 console.log(error.response ? error.response.status : 'No response from API')
@@ -102,6 +102,21 @@ const Room = ({data, setData}) => {
             }
         }
     }
+    const canAct = local.playing && local.turn && local.tank.actions && local.tank.health
+
+    const voteHandle = async agree => {
+        if(!waiting) {
+            setWaiting(true)
+            try {
+                const response = await axios.patch(getApiUrl(`/${local.username}/vote`), {agree})
+                setData(response.data)
+            } catch (error) {
+                console.log(error.response ? error.response.status : 'No response from API')
+            } finally {
+                setWaiting(false)
+            }
+        }
+    }
 
     return (
         <div className="Room">
@@ -114,7 +129,7 @@ const Room = ({data, setData}) => {
                     <>
                         <div className="sidebar">
                             <h3>Room: {local.room}</h3>
-                            <button onClick={leaveRoomHandle}>leave</button>
+                            <button onClick={() => commonButtonPatchHandle('leave')}>leave</button>
                             <h3>Spectating:</h3>
                             <ul className="spectators">
                                 {[...spectating].sort(
@@ -179,12 +194,27 @@ const Room = ({data, setData}) => {
                                             )}
                                         </div>
                                         {
+                                            !local.playing && (!online.length || !online.find(o => o.turn)) ?
+                                                <button onClick={() => commonButtonPatchHandle('play')}>play</button> : (
+                                                    local.playing && !local.ready && online.filter(o => o.playing).length ?
+                                                        <button onClick={() => commonButtonPatchHandle('ready')}>ready</button> : ''
+                                                )
+                                        }
+                                        {
                                             local.turn ?
-                                                <h3>Your turn</h3> : ''
+                                                <>
+                                                    <h3>Your turn</h3>
+                                                    <button onClick={() => commonButtonPatchHandle('end')}>end turn</button>
+                                                    {canAct && local.tank.actions<3 && !local.cancelUser.length ? <button onClick={() => commonButtonPatchHandle('cancel')}>cancel move</button> : ''}
+                                                </> : ''
                                         }
                                         {
                                             local.cancelUser.length ?
-                                                <h3>{local.cancel ? 'Waiting for votes' : `${local.cancelUser} wants to cancel move`}</h3> : ''
+                                                <>
+                                                    <h3>{local.cancel ? 'Waiting for votes' : `${local.cancelUser} wants to cancel move`}</h3>
+                                                    <button onClick={() => voteHandle(true)}>yes</button>
+                                                    <button onClick={() => voteHandle(false)}>no</button>
+                                                </>: ''
                                         }
                                     </div>
                                 </>

@@ -5,6 +5,7 @@ import {
 } from "../functions";
 import Chat from "./Chat";
 import Room from "./Room";
+import '../styles/Game.css'
 
 const Game = ({data, setData, user}) => {
 
@@ -26,8 +27,14 @@ const Game = ({data, setData, user}) => {
     return (
         <div className="Game">
             <h3>User: {local.username}</h3>
-            <Room data={data} setData={setData}/>
-            <Chat local={local} setData={setData}/>
+            <div className="main-columns">
+                <div className="chat-wrap">
+                    <Chat local={local} setData={setData}/>
+                </div>
+                <div className="room-wrap">
+                    <Room data={data} setData={setData}/>
+                </div>
+            </div>
         </div>
     )
 }

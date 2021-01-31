@@ -229,7 +229,7 @@ const messageLogic = async (client, store, topic, message) => {
                     const tank = local.tank
                     storeLoaded.dispatch(setInitialPositionAction(tank.row, tank.column, tank.rotation))
                     if(!local.tank.health) {
-                        endTurn(client, store, storeLoaded.getState().reducerLocal)
+                        endTurn(client, storeLoaded)
                     }
                 } else {
                     const userObject = [local, ...online].find(u => u.username===messageUser)
@@ -309,9 +309,8 @@ const messageLogic = async (client, store, topic, message) => {
     return true
 }
 
-const endTurn = (client, store, local) => {
-    const storeCurrentUser = store.getState().reducerExtra.currentUser
-    const storeLoaded = storeWithUser(store, storeCurrentUser)
+const endTurn = (client, storeLoaded) => {
+    const local = storeLoaded.getState().reducerLocal
 
     const next = local.next
     storeLoaded.dispatch(setTurnLocalAction(false))
@@ -366,6 +365,118 @@ const sendRoomMessage = (client, storeLoaded, message) => {
     client.publish(`${topicRoomPrefix}/message/${room}/${username}`, JSON.stringify({message}))
 }
 
+const play = (client, storeLoaded) => {
+    const state = storeLoaded.getState()
+    const local = state.reducerLocal
+    const online = state.reducerOnline
+    const username = local.username
+    const room = local.room
+
+    const getRandomIntInclusive = (min, max) => {
+        return Math.floor(Math.random() * (max - min + 1) + min)
+    }
+    const emptyFields = local.board.flat().filter(field => field.tank==='')
+    const chosenField = emptyFields[getRandomIntInclusive(0, emptyFields.length-1)]
+    const rotation = getRandomIntInclusive(0, 3)
+
+    storeLoaded.dispatch(setTankLocalAction(chosenField.indexRow, chosenField.indexColumn, rotation))
+    storeLoaded.dispatch(setTankBoardAction(chosenField.indexRow, chosenField.indexColumn, username))
+
+    const firstPlayer = online.find(user => user.playing && user.first)
+    const lastPlayer = firstPlayer===undefined ? undefined : online.find(user => user.username===firstPlayer.previous)
+    const [previous, next] = firstPlayer!==lastPlayer || (firstPlayer===lastPlayer && firstPlayer!==undefined) ? [lastPlayer.username, firstPlayer.username] : [username, username]
+    storeLoaded.dispatch(setPreviousNextLocalAction(previous, next))
+    storeLoaded.dispatch(setFirstLocalAction(firstPlayer===undefined))
+    if(firstPlayer===lastPlayer) {
+        if(firstPlayer!==undefined) {
+            storeLoaded.dispatch(setPreviousNextOnlineAction(username, username, firstPlayer.username))
+        }
+    } else {
+        storeLoaded.dispatch(setPreviousNextOnlineAction(username, undefined, firstPlayer.username))
+        storeLoaded.dispatch(setPreviousNextOnlineAction(undefined, username, lastPlayer.username))
+    }
+    storeLoaded.dispatch(setPlayingLocalAction(true))
+    client.publish(`${topicRoomPrefix}/play/${room}/${username}`, JSON.stringify({
+        tank: {row: chosenField.indexRow, column: chosenField.indexColumn, rotation},
+        first: firstPlayer===undefined,
+        previous,
+        next
+    }))
+}
+
+const ready = (client, storeLoaded) => {
+    const state = storeLoaded.getState()
+    const local = state.reducerLocal
+    const online = state.reducerOnline
+    const username = local.username
+    const room = local.room
+
+    storeLoaded.dispatch(setReadyLocalAction(true))
+    client.publish(`${topicRoomPrefix}/ready/${room}/${username}`, '{}')
+
+    const playing = online.filter(p => p.playing)
+    if(playing.every(p => p.ready)) {
+        const first = [local, ...online].find(u => u.playing && u.first)
+        if(first.username===username) {
+            storeLoaded.dispatch(setTurnLocalAction(true))
+
+        } else {
+            storeLoaded.dispatch(setTurnOnlineAction(true, first.username))
+        }
+    }
+    const tank = local.tank
+    storeLoaded.dispatch(setInitialPositionAction(tank.row, tank.column, tank.rotation))
+}
+
+const endPlayerTurn = (client, storeLoaded) => {
+    const local = storeLoaded.getState().reducerLocal
+
+    endTurn(client, storeLoaded)
+    if(local.cancelUser.length) {
+        stopVoting()
+    }
+}
+
+const stopVoting = storeLoaded => {
+    const state = storeLoaded.getState()
+    const local = state.reducerLocal
+    const online = state.reducerOnline
+
+    storeLoaded.dispatch(setCancelUserAction(''))
+    storeLoaded.dispatch(setCancelLocalAction(false))
+    const onlineVoting = online.filter(o => o.vote)
+    onlineVoting.forEach(o => storeLoaded.dispatch(setVoteOnlineAction(0, o.username)))
+    if(local.vote) {
+        storeLoaded.dispatch(setVoteLocalAction(0))
+    }
+}
+const vote = (client, storeLoaded, agree) => {
+    const local = storeLoaded.getState().reducerLocal
+    const room = local.room
+    const username = local.username
+
+    if(agree) {
+        storeLoaded.dispatch(setVoteLocalAction(1))
+
+    } else {
+        stopVoting(storeLoaded)
+    }
+    client.publish(`${topicRoomPrefix}/vote/${room}/${username}`, JSON.stringify({agree}))
+}
+const cancel = (client, storeLoaded) => {
+    const local = storeLoaded.getState().reducerLocal
+    const username = local.username
+    const room = local.room
+
+    storeLoaded.dispatch(setCancelLocalAction(true))
+    storeLoaded.dispatch(setCancelUserAction(username))
+    client.publish(`${topicRoomPrefix}/cancel/${room}/${username}`, '{}')
+}
+const canAct = storeLoaded => {
+    const local = storeLoaded.getState().reducerLocal
+    return local.playing && local.turn && local.tank.actions && local.tank.health
+}
+
 module.exports= {
     messageLogic,
     storeWithUser,
@@ -375,5 +486,12 @@ module.exports= {
     sendChat,
     joinRoom,
     leaveRoom,
-    sendRoomMessage
+    sendRoomMessage,
+    play,
+    ready,
+    endPlayerTurn,
+    stopVoting,
+    vote,
+    cancel,
+    canAct
 }
