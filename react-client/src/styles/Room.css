@@ -46,6 +46,9 @@
     justify-content: center;
     background-color: darkgrey;
 }
+.field.line-of-sight {
+    background-color: lightgreen;
+}
 .field.you {
     background-color: white;
 }

@@ -132,6 +132,23 @@ const Room = ({data, setData}) => {
         }
     }
 
+    const isLineOfSight = (row, column) => {
+        const tank = local.tank
+        const rotation = tank.rotation
+        if(rotation===0) {
+            return row < tank.row && column===tank.column;
+
+        } else if (rotation===1){
+            return column > tank.column && row===tank.row;
+
+        } else if (rotation===2){
+            return row > tank.row && column===tank.column;
+
+        } else if (rotation===3){
+            return column < tank.column && row===tank.row;
+        }
+    }
+
     return (
         <div className="Room">
             {
@@ -201,7 +218,7 @@ const Room = ({data, setData}) => {
                                         <div className="board">
                                             {local.board.map((row, indexRow) =>
                                                 row.map((field, indexColumn) =>
-                                                    <div key={`${indexRow}-${indexColumn}`} className={`field ${field.tank===local.username ? 'you' : ''}`}>
+                                                    <div key={`${indexRow}-${indexColumn}`} className={`field${field.tank===local.username ? ' you' : ''}${local.turn && local.tank.actions && local.tank.health && isLineOfSight(indexRow, indexColumn) ? ' line-of-sight' : ''}`}>
                                                         {field.tank.length ? tankElement(playing.find(user => user.username===field.tank)) : ''}
                                                     </div>
                                                 )
