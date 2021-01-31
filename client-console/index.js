@@ -2,23 +2,6 @@ require('dotenv').config()
 const readline = require('readline')
 const mqtt = require('mqtt')
 const {
-    setPlayingLocalAction,
-    setTankLocalAction,
-    setTankBoardAction,
-    setTurnLocalAction,
-    setReadyLocalAction,
-    decrementActionsLocalAction,
-    resetActionsLocalAction,
-    addPointsLocalAction,
-    setWinnerAction
-} = require('../tanks-game/actions/actionsLocal')
-const {
-    setPlayingOnlineAction,
-    setTurnOnlineAction,
-    setReadyOnlineAction,
-    decrementHealthOnlineAction
-} = require('../tanks-game/actions/actionsOnline')
-const {
     setCurrentChatAction,
     removeChatNotificationAction,
     addChatNotificationAction,
@@ -50,7 +33,6 @@ const {render} = require('./functions')
 const {
     storeWithUser,
     messageLogic,
-    endTurn,
     createUser,
     sendChat,
     joinRoom,
@@ -58,15 +40,15 @@ const {
     sendRoomMessage,
     play,
     ready,
-    stopVoting,
     endPlayerTurn,
     vote,
     cancel,
-    canAct
+    canAct,
+    move,
+    shoot
 } = require('../tanks-game/functions')
 const {
-    topicChatPrefix,
-    topicRoomPrefix
+    topicChatPrefix
 } = require('../tanks-game/prefixes')
 const renderWithStore = currentUser => render(storeWithUser(store, currentUser))
 
@@ -188,134 +170,23 @@ rl.on('line', async input => {
         } else if(input==='/end' && local.turn){
             endPlayerTurn(client, storeLoaded)
 
-        } else if(canAct(storeLoaded) && (input==='/back' || input==='/forward')){
-            const tank = local.tank
-            const board = local.board
-            const boardSize = board.length
-
-            const forwardMultiplier = input==='/forward' ? 1 : -1
-            const forwardRotationMultiplier = tank.rotation===1 || tank.rotation===2 ? 1 : -1
-
-            const rowNew = tank.rotation%2===0 ?
-                tank.row + forwardMultiplier*forwardRotationMultiplier :
-                tank.row
-            const columnNew = tank.rotation%2===1 ?
-                tank.column + forwardMultiplier*forwardRotationMultiplier :
-                tank.column
-
-            if (rowNew>=0 && columnNew>=0 && rowNew<boardSize && columnNew<boardSize && board[rowNew][columnNew].tank==='') {
-                const newLocation = {
-                    rotation: tank.rotation,
-                    row: rowNew,
-                    column: columnNew
-                }
-                storeLoaded.dispatch(decrementActionsLocalAction())
-                storeLoaded.dispatch(setTankLocalAction(newLocation.row, newLocation.column, newLocation.rotation))
-                storeLoaded.dispatch(setTankBoardAction(newLocation.row, newLocation.column, username))
-                client.publish(`${topicRoomPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
-
-                if(!storeLoaded.getState().reducerLocal.tank.actions) {
-                    endTurn(client, storeLoaded)
-                }
-                if(local.cancelUser.length) {
-                    stopVoting(storeLoaded)
+        } else if(canAct(storeLoaded) && ['/left', '/right', '/back', '/forward'].includes(input)){
+            const getMoveType = () => {
+                if(input==='/left') {
+                    return 'L'
+                } else if(input==='/right') {
+                    return 'R'
+                }else if (input==='/forward') {
+                    return 'F'
+                } else {
+                    return 'B'
                 }
             }
-
-        } else if(canAct(storeLoaded) && (input==='/left' || input==='/right')){
-            const tank = local.tank
-            const maxRotation = 4
-            const newLocation = {
-                rotation: input==='/right' ? (tank.rotation+1)%maxRotation : tank.rotation===0 ? maxRotation-1 : tank.rotation-1,
-                row: tank.row,
-                column: tank.column
-            }
-            storeLoaded.dispatch(decrementActionsLocalAction())
-            storeLoaded.dispatch(setTankLocalAction(newLocation.row, newLocation.column, newLocation.rotation))
-            client.publish(`${topicRoomPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
-
-            if(!storeLoaded.getState().reducerLocal.tank.actions) {
-                endTurn(client, storeLoaded)
-            }
-            if(local.cancelUser.length) {
-                stopVoting(storeLoaded)
-            }
+            const moveType = getMoveType()
+            move(client, storeLoaded, moveType)
 
         } else if (canAct(storeLoaded) && input==='/shoot') {
-            const tank = local.tank
-            const rotation = tank.rotation
-
-            const getTargets = () => {
-                const lineOfSightTargets = check => local.board.flat().filter(field => field.tank.length && check(field))
-                if(rotation===0) {
-                    return lineOfSightTargets(field =>
-                        field.indexRow<tank.row && field.indexColumn===tank.column
-                    )
-                } else if(rotation===1) {
-                    return lineOfSightTargets(field =>
-                        field.indexRow===tank.row && field.indexColumn>tank.column
-                    )
-                } else if(rotation===2) {
-                    return lineOfSightTargets(field =>
-                        field.indexRow>tank.row && field.indexColumn===tank.column
-                    )
-                } else if(rotation===3) {
-                    return lineOfSightTargets(field =>
-                        field.indexRow===tank.row && field.indexColumn<tank.column
-                    )
-                }
-            }
-
-            const targets = getTargets()
-
-            const getClosestTarget = () => {
-                const reduceTargets = check =>
-                    targets.reduce((closest, current) => check(closest, current) ? current : closest)
-                if (rotation===0) {
-                    return reduceTargets((closest, current) => closest.indexRow<current.indexRow)
-                } else if (rotation===1) {
-                    return reduceTargets((closest, current) => closest.indexColumn>current.indexColumn)
-                } else if (rotation===2) {
-                    return reduceTargets((closest, current) => closest.indexRow>current.indexRow)
-                } else if (rotation===3) {
-                    return reduceTargets((closest, current) => closest.indexColumn<current.indexColumn)
-                }
-            }
-            const target = targets.length > 1 ? getClosestTarget().tank : (targets.length ? targets[0].tank : '')
-            const targetObject = target.length ? online.find(o => o.username===target) : undefined
-            const finalTarget = !target.length || targetObject.tank.health ? target  : ''
-            storeLoaded.dispatch(resetActionsLocalAction(false))
-            if(finalTarget.length) {
-                storeLoaded.dispatch(decrementHealthOnlineAction(finalTarget))
-            }
-            const kill = targetObject && !(targetObject.tank.health-1)
-            if(kill) {
-                storeLoaded.dispatch(addPointsLocalAction(1))
-            }
-            const win = kill && storeLoaded.getState().reducerOnline.filter(u => u.playing).every(u => !u.tank.health)
-
-            client.publish(`${topicRoomPrefix}/shoot/${room}/${username}`, JSON.stringify({target: finalTarget, kill}))
-
-            if(!storeLoaded.getState().reducerLocal.tank.actions) {
-                endTurn(client, storeLoaded)
-            }
-            if(local.cancelUser.length) {
-                stopVoting(storeLoaded)
-            }
-
-            if(win) {
-                const score = storeLoaded.getState().reducerLocal.score
-                storeLoaded.dispatch(setWinnerAction(username, score))
-                storeLoaded.dispatch(setTurnLocalAction(false))
-                storeLoaded.dispatch(setReadyLocalAction(false))
-                storeLoaded.dispatch(setPlayingLocalAction(false))
-                online.filter(u => u.playing).forEach(user => {
-                    storeLoaded.dispatch(setTurnOnlineAction(false, user.username))
-                    storeLoaded.dispatch(setReadyOnlineAction(false, user.username))
-                    storeLoaded.dispatch(setPlayingOnlineAction(false, user.username))
-                })
-                client.publish(`${topicRoomPrefix}/win/${room}/${username}`, JSON.stringify({score}))
-            }
+            shoot(client, storeLoaded)
 
         } else if(canAct(storeLoaded) && local.tank.actions<3 && !local.cancelUser.length && input==='/cancel'){
             cancel(client, storeLoaded)

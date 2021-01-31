@@ -27,8 +27,8 @@ client.on('error', () => {
 const store = require('../tanks-game/store')()
 
 const {
-    messageLogic,
     storeWithUser,
+    messageLogic,
     createUser,
     sendChat,
     joinRoom,
@@ -38,7 +38,10 @@ const {
     ready,
     endPlayerTurn,
     vote,
-    cancel
+    cancel,
+    canAct,
+    move,
+    shoot
 } = require('../tanks-game/functions')
 
 client.on('message',  async (topic, message) => {
@@ -104,27 +107,27 @@ app.post('/:username/message', (req, res) => {
     return res.status(201).json(storeLoaded.getState())
 })
 
-app.patch('/:username/play', async (req, res) => {
+app.patch('/:username/play',(req, res) => {
     const username = req.params.username
     const storeLoaded = storeWithUser(store, username)
     play(client, storeLoaded)
     return res.json(storeLoaded.getState())
 })
 
-app.patch('/:username/ready', async (req, res) => {
+app.patch('/:username/ready',(req, res) => {
     const username = req.params.username
     const storeLoaded = storeWithUser(store, username)
     ready(client, storeLoaded)
     return res.json(storeLoaded.getState())
 })
 
-app.patch('/:username/end', async (req, res) => {
+app.patch('/:username/end', (req, res) => {
     const username = req.params.username
     const storeLoaded = storeWithUser(store, username)
     endPlayerTurn(client, storeLoaded)
     return res.json(storeLoaded.getState())
 })
-app.patch('/:username/vote', async (req, res) => {
+app.patch('/:username/vote', (req, res) => {
     const username = req.params.username
     const agree = req.body.agree
     if(typeof agree !== 'boolean') {
@@ -134,9 +137,28 @@ app.patch('/:username/vote', async (req, res) => {
     vote(client, storeLoaded, agree)
     return res.json(storeLoaded.getState())
 })
-app.patch('/:username/cancel', async (req, res) => {
+app.patch('/:username/cancel', (req, res) => {
     const username = req.params.username
     const storeLoaded = storeWithUser(store, username)
     cancel(client, storeLoaded)
+    return res.json(storeLoaded.getState())
+})
+app.patch('/:username/move', (req, res) => {
+    const username = req.params.username
+    const moveType = req.body.move
+    if(typeof moveType !== 'string' || !['R', 'L', 'F', 'B'].includes(moveType)) {
+        return res.status(422).json({})
+    }
+    const storeLoaded = storeWithUser(store, username)
+    if (move(client, storeLoaded, moveType)) {
+        return res.json(storeLoaded.getState())
+    } else {
+        return res.status(409).json({})
+    }
+})
+app.patch('/:username/shoot', (req, res) => {
+    const username = req.params.username
+    const storeLoaded = storeWithUser(store, username)
+    shoot(client, storeLoaded)
     return res.json(storeLoaded.getState())
 })

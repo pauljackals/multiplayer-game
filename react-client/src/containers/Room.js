@@ -118,6 +118,20 @@ const Room = ({data, setData}) => {
         }
     }
 
+    const moveHandle = async move => {
+        if(!waiting) {
+            setWaiting(true)
+            try {
+                const response = await axios.patch(getApiUrl(`/${local.username}/move`), {move})
+                setData(response.data)
+            } catch (error) {
+                console.log(error.response ? error.response.status : 'No response from API')
+            } finally {
+                setWaiting(false)
+            }
+        }
+    }
+
     return (
         <div className="Room">
             {
@@ -205,15 +219,43 @@ const Room = ({data, setData}) => {
                                                 <>
                                                     <h3>Your turn</h3>
                                                     <button onClick={() => commonButtonPatchHandle('end')}>end turn</button>
+                                                    {
+                                                        canAct ?
+                                                            <table className="tank-controls">
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td/>
+                                                                        <td><button onClick={() => moveHandle('F')}>forward</button></td>
+                                                                        <td/>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td><button onClick={() => moveHandle('L')}>turn left</button></td>
+                                                                        <td><button onClick={() => commonButtonPatchHandle('shoot')}>shoot</button></td>
+                                                                        <td><button onClick={() => moveHandle('R')}>turn right</button></td>
+                                                                    </tr>
+                                                                    <tr>
+                                                                        <td/>
+                                                                        <td><button onClick={() => moveHandle('B')}>back</button></td>
+                                                                        <td/>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table> : ''
+                                                    }
                                                     {canAct && local.tank.actions<3 && !local.cancelUser.length ? <button onClick={() => commonButtonPatchHandle('cancel')}>cancel move</button> : ''}
                                                 </> : ''
                                         }
                                         {
                                             local.cancelUser.length ?
                                                 <>
-                                                    <h3>{local.cancel ? 'Waiting for votes' : `${local.cancelUser} wants to cancel move`}</h3>
-                                                    <button onClick={() => voteHandle(true)}>yes</button>
-                                                    <button onClick={() => voteHandle(false)}>no</button>
+                                                    {
+                                                        !local.cancel ?
+                                                            <>
+                                                                <h3>{`${local.cancelUser} wants to cancel move`}</h3>
+                                                                <button onClick={() => voteHandle(true)}>yes</button>
+                                                                <button onClick={() => voteHandle(false)}>no</button>
+                                                            </> :
+                                                            <h3>Waiting for votes</h3>
+                                                    }
                                                 </>: ''
                                         }
                                     </div>

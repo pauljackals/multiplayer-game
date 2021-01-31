@@ -19,7 +19,9 @@ const {
     addTopicsAction,
     setRoomAction,
     removeTopicsAction,
-    resetLocalAction
+    resetLocalAction,
+    decrementActionsLocalAction,
+    addPointsLocalAction
 } = require('../tanks-game/actions/actionsLocal')
 const {
     addUserAction,
@@ -433,7 +435,7 @@ const endPlayerTurn = (client, storeLoaded) => {
 
     endTurn(client, storeLoaded)
     if(local.cancelUser.length) {
-        stopVoting()
+        stopVoting(storeLoaded)
     }
 }
 
@@ -477,11 +479,152 @@ const canAct = storeLoaded => {
     return local.playing && local.turn && local.tank.actions && local.tank.health
 }
 
+const move = (client, storeLoaded, moveType) => {
+    const local = storeLoaded.getState().reducerLocal
+    const tank = local.tank
+    const username = local.username
+    const room = local.room
+
+    if(['R', 'L'].includes(moveType)) {
+        const maxRotation = 4
+        const newLocation = {
+            rotation: moveType==='R' ? (tank.rotation+1)%maxRotation : tank.rotation===0 ? maxRotation-1 : tank.rotation-1,
+            row: tank.row,
+            column: tank.column
+        }
+        storeLoaded.dispatch(decrementActionsLocalAction())
+        storeLoaded.dispatch(setTankLocalAction(newLocation.row, newLocation.column, newLocation.rotation))
+        client.publish(`${topicRoomPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
+
+        if(!storeLoaded.getState().reducerLocal.tank.actions) {
+            endTurn(client, storeLoaded)
+        }
+        if(local.cancelUser.length) {
+            stopVoting(storeLoaded)
+        }
+    } else if (['F', 'B'].includes(moveType)) {
+        const board = local.board
+        const boardSize = board.length
+
+        const forwardMultiplier = moveType==='F' ? 1 : -1
+        const forwardRotationMultiplier = tank.rotation===1 || tank.rotation===2 ? 1 : -1
+
+        const rowNew = tank.rotation%2===0 ?
+            tank.row + forwardMultiplier*forwardRotationMultiplier :
+            tank.row
+        const columnNew = tank.rotation%2===1 ?
+            tank.column + forwardMultiplier*forwardRotationMultiplier :
+            tank.column
+
+        if (rowNew>=0 && columnNew>=0 && rowNew<boardSize && columnNew<boardSize && board[rowNew][columnNew].tank==='') {
+            const newLocation = {
+                rotation: tank.rotation,
+                row: rowNew,
+                column: columnNew
+            }
+            storeLoaded.dispatch(decrementActionsLocalAction())
+            storeLoaded.dispatch(setTankLocalAction(newLocation.row, newLocation.column, newLocation.rotation))
+            storeLoaded.dispatch(setTankBoardAction(newLocation.row, newLocation.column, username))
+            client.publish(`${topicRoomPrefix}/action/${room}/${username}`, JSON.stringify(newLocation))
+
+            if(!storeLoaded.getState().reducerLocal.tank.actions) {
+                endTurn(client, storeLoaded)
+            }
+            if(local.cancelUser.length) {
+                stopVoting(storeLoaded)
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+}
+const shoot = (client, storeLoaded) => {
+    const state = storeLoaded.getState()
+    const local = state.reducerLocal
+    const online = state.reducerOnline
+
+    const tank = local.tank
+    const rotation = tank.rotation
+    const username = local.username
+    const room = local.room
+
+    const getTargets = () => {
+        const lineOfSightTargets = check => local.board.flat().filter(field => field.tank.length && check(field))
+        if(rotation===0) {
+            return lineOfSightTargets(field =>
+                field.indexRow<tank.row && field.indexColumn===tank.column
+            )
+        } else if(rotation===1) {
+            return lineOfSightTargets(field =>
+                field.indexRow===tank.row && field.indexColumn>tank.column
+            )
+        } else if(rotation===2) {
+            return lineOfSightTargets(field =>
+                field.indexRow>tank.row && field.indexColumn===tank.column
+            )
+        } else if(rotation===3) {
+            return lineOfSightTargets(field =>
+                field.indexRow===tank.row && field.indexColumn<tank.column
+            )
+        }
+    }
+
+    const targets = getTargets()
+
+    const getClosestTarget = () => {
+        const reduceTargets = check =>
+            targets.reduce((closest, current) => check(closest, current) ? current : closest)
+        if (rotation===0) {
+            return reduceTargets((closest, current) => closest.indexRow<current.indexRow)
+        } else if (rotation===1) {
+            return reduceTargets((closest, current) => closest.indexColumn>current.indexColumn)
+        } else if (rotation===2) {
+            return reduceTargets((closest, current) => closest.indexRow>current.indexRow)
+        } else if (rotation===3) {
+            return reduceTargets((closest, current) => closest.indexColumn<current.indexColumn)
+        }
+    }
+    const target = targets.length > 1 ? getClosestTarget().tank : (targets.length ? targets[0].tank : '')
+    const targetObject = target.length ? online.find(o => o.username===target) : undefined
+    const finalTarget = !target.length || targetObject.tank.health ? target  : ''
+    storeLoaded.dispatch(resetActionsLocalAction(false))
+    if(finalTarget.length) {
+        storeLoaded.dispatch(decrementHealthOnlineAction(finalTarget))
+    }
+    const kill = targetObject && !(targetObject.tank.health-1)
+    if(kill) {
+        storeLoaded.dispatch(addPointsLocalAction(1))
+    }
+    const win = kill && storeLoaded.getState().reducerOnline.filter(u => u.playing).every(u => !u.tank.health)
+
+    client.publish(`${topicRoomPrefix}/shoot/${room}/${username}`, JSON.stringify({target: finalTarget, kill}))
+
+    if(!storeLoaded.getState().reducerLocal.tank.actions) {
+        endTurn(client, storeLoaded)
+    }
+    if(local.cancelUser.length) {
+        stopVoting(storeLoaded)
+    }
+
+    if(win) {
+        const score = storeLoaded.getState().reducerLocal.score
+        storeLoaded.dispatch(setWinnerAction(username, score))
+        storeLoaded.dispatch(setTurnLocalAction(false))
+        storeLoaded.dispatch(setReadyLocalAction(false))
+        storeLoaded.dispatch(setPlayingLocalAction(false))
+        online.filter(u => u.playing).forEach(user => {
+            storeLoaded.dispatch(setTurnOnlineAction(false, user.username))
+            storeLoaded.dispatch(setReadyOnlineAction(false, user.username))
+            storeLoaded.dispatch(setPlayingOnlineAction(false, user.username))
+        })
+        client.publish(`${topicRoomPrefix}/win/${room}/${username}`, JSON.stringify({score}))
+    }
+}
+
 module.exports= {
     messageLogic,
     storeWithUser,
-    endTurn,
-    getDataForPublish,
     createUser,
     sendChat,
     joinRoom,
@@ -490,8 +633,9 @@ module.exports= {
     play,
     ready,
     endPlayerTurn,
-    stopVoting,
     vote,
     cancel,
-    canAct
+    canAct,
+    move,
+    shoot
 }

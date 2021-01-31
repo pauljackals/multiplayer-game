@@ -115,3 +115,15 @@
     display: flex;
     flex-direction: column-reverse;
 }
+.tank-controls {
+    border: 1px solid black;
+}
+.tank-controls td {
+    height: 20px;
+    width: 80px;
+}
+.tank-controls button {
+    display: block;
+    margin-right: auto;
+    margin-left: auto;
+}
