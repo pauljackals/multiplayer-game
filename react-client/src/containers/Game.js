@@ -7,12 +7,13 @@ import Chat from "./Chat";
 import Room from "./Room";
 import '../styles/Game.css'
 
-const Game = ({data, setData, user}) => {
+const Game = ({data, setData}) => {
+    const local = data.reducerLocal
 
     useEffect(() => {
         const intervalId = setInterval(async () => {
             try {
-                const response = await axios.get(getApiUrl(`/${user}`))
+                const response = await axios.get(getApiUrl(`/${local.username}`))
                 setData(response.data)
             } catch (error) {
                 console.log(error.response ? error.response.status : 'No response from API')
@@ -21,9 +22,8 @@ const Game = ({data, setData, user}) => {
 
         return () => clearInterval(intervalId);
 
-    }, [user, setData])
+    }, [local, setData])
 
-    const local = data.reducerLocal
     return (
         <div className="Game">
             <h3>User: {local.username}</h3>

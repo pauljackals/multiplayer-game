@@ -1,19 +1,18 @@
 import {connect} from 'react-redux'
 import {
-    setDataAction,
-    setUserAction
+    setDataAction
 } from "../actions/actionsData";
 import Start from "./Start";
 import Game from "./Game";
 
-const App = ({user, data, setUser, setData}) => {
+const App = ({data, setData}) => {
   return (
     <div className="App">
       <h1>TANKS</h1>
         {
-            !user.length ?
-                <Start setUser={setUser} setData={setData}/> :
-                <Game data={data} setData={setData} user={user}/>
+            !Object.keys(data).length ?
+                <Start setData={setData}/> :
+                <Game data={data} setData={setData}/>
         }
     </div>
   );
@@ -21,16 +20,12 @@ const App = ({user, data, setUser, setData}) => {
 
 const mapStateToProps = state => {
     return {
-        user: state.reducerData.user,
-        data: state.reducerData.data
+        data: state.reducerData
     }
 }
 
 const mapDispatchToProps = dispatch => {
     return {
-        setUser: user => {
-            dispatch(setUserAction(user))
-        },
         setData: data => {
             dispatch(setDataAction(data))
         }

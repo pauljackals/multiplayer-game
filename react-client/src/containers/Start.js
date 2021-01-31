@@ -4,18 +4,24 @@ import {
     getApiUrl
 } from "../functions";
 
-const Start = ({setUser, setData}) => {
+const Start = ({setData}) => {
     const [waiting, setWaiting] = useState(false)
 
     const submitHandle = async event => {
         event.preventDefault()
-        if(!waiting) {
+        const username = event.target.username.value
+        if(username.length && !waiting) {
             setWaiting(true)
-            const username = event.target.username.value
+            try {
+                const response = await axios.get(getApiUrl(`/${username}`))
+                setData(response.data)
+                return
+            } catch (error) {
+                console.log(error.response ? error.response.status : 'No response from API')
+            }
             try {
                 const response = await axios.post(getApiUrl('/'), {username})
                 setData(response.data)
-                setUser(username)
             } catch (error) {
                 console.log(error.response ? error.response.status : 'No response from API')
                 setWaiting(false)

@@ -502,6 +502,7 @@ const move = (client, storeLoaded, moveType) => {
         if(local.cancelUser.length) {
             stopVoting(storeLoaded)
         }
+        return true
     } else if (['F', 'B'].includes(moveType)) {
         const board = local.board
         const boardSize = board.length
