@@ -21,7 +21,9 @@ const {
     SET_CANCEL_USER,
     SET_VOTE_LOCAL,
     ADD_TOPICS,
-    REMOVE_TOPICS
+    REMOVE_TOPICS,
+    SET_UNREAD,
+    SET_CURRENT_CHAT
 } = require('../types/typesLocal')
 
 const setRoomAction = room => {
@@ -93,6 +95,12 @@ const addTopicsAction = topics => {
 const removeTopicsAction = topics => {
     return {type: REMOVE_TOPICS, payload: {topics}}
 }
+const setUnreadAction = (user, number) => {
+    return {type: SET_UNREAD, payload: {user, number}}
+}
+const setCurrentChatAction = user => {
+    return {type: SET_CURRENT_CHAT, payload: {user}}
+}
 
 module.exports={
     setRoomAction,
@@ -117,5 +125,7 @@ module.exports={
     setCancelUserAction,
     setVoteLocalAction,
     addTopicsAction,
-    removeTopicsAction
+    removeTopicsAction,
+    setUnreadAction,
+    setCurrentChatAction
 }

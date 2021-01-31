@@ -22,7 +22,9 @@ const {
     SET_VOTE_LOCAL,
     SET_CANCEL_USER,
     ADD_TOPICS,
-    REMOVE_TOPICS
+    REMOVE_TOPICS,
+    SET_UNREAD,
+    SET_CURRENT_CHAT
 } = require('../types/typesLocal')
 
 const reducerLocalSingle = (state, action) => {
@@ -35,7 +37,9 @@ const reducerLocalSingle = (state, action) => {
                 ...INITIAL_STATE,
                 username: state.username,
                 chat: state.chat,
-                topics: state.topics
+                topics: state.topics,
+                currentChat: state.currentChat,
+                unread: state.unread
             }
 
         } case ADD_MESSAGE: {
@@ -90,6 +94,13 @@ const reducerLocalSingle = (state, action) => {
         } case REMOVE_TOPICS: {
             return {...state, topics: state.topics.filter(topic => !action.payload.topics.includes(topic))}
 
+        } case SET_UNREAD: {
+            const payload = action.payload
+            return {...state, unread: {...state.unread, [payload.user]: payload.number}}
+
+        } case SET_CURRENT_CHAT: {
+            return {...state, currentChat: action.payload.user}
+
         } case SET_CANCEL_LOCAL:
         case SET_VOTE_LOCAL:
         case ADD_POINTS_LOCAL:
@@ -116,7 +127,9 @@ const reducerLocal = (state={}, action) => {
             const username = action.payload.username
             return {...state, [username]: {...INITIAL_STATE, username}}
 
-        } case REMOVE_TOPICS:
+        } case SET_UNREAD:
+        case SET_CURRENT_CHAT:
+        case REMOVE_TOPICS:
         case ADD_TOPICS:
         case SET_CANCEL_LOCAL:
         case SET_VOTE_LOCAL:

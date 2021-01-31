@@ -3,13 +3,12 @@ const render = store => () => {
     const state = store.getState()
     const local = state.reducerLocal
     const online = state.reducerOnline
-    const extra = state.reducerExtra
     const room = local.room
 
     console.log('>> TANKS <<')
     console.log()
 
-    if(extra.help){
+    if(state.reducerExtra.help){
         console.log("*Commands manual*")
         console.log("  /help - opens this manual")
         console.log("  /exit - exits current page")
@@ -27,8 +26,9 @@ const render = store => () => {
         return
     }
 
-    if(extra.notifications.length){
-        extra.notifications.forEach(n => console.log(`*New message from ${n.user}*`))
+    const unread = Object.entries(local.unread)
+    unread.forEach(u => u[1] && console.log(`*New messages from ${u[0]} (${u[1]})*`))
+    if(unread.find(u => u[1])){
         console.log()
     }
 
@@ -36,8 +36,8 @@ const render = store => () => {
         console.log(`User: ${local.username}`)
     }
 
-    if(extra.currentChat.length) {
-        const currentChatUser = extra.currentChat
+    if(local.currentChat.length) {
+        const currentChatUser = local.currentChat
         console.log(`Chat User: ${currentChatUser}`)
         console.log()
         console.log("Messages:")

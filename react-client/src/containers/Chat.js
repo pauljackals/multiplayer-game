@@ -4,8 +4,8 @@ import axios from "axios";
 import {getApiUrl} from "../functions";
 
 const Chat = ({local, setData}) => {
-    const [currentChat, setCurrentChat] = useState('')
     const [waiting, setWaiting] = useState(false)
+    const currentChat = local.currentChat
 
     const sendMessageHandle = async event => {
         event.preventDefault()
@@ -28,8 +28,22 @@ const Chat = ({local, setData}) => {
         event.preventDefault()
         const user = event.target.user.value
         if(user.length && user!==local.username) {
-            setCurrentChat(user)
+            await readChatHandle(user)
             event.target.reset()
+        }
+    }
+
+    const readChatHandle = async user => {
+        if(!waiting) {
+            setWaiting(true)
+            try {
+                const response = await axios.patch(getApiUrl(`/${local.username}/read`), {user})
+                setData(response.data)
+            } catch (error) {
+                console.log(error.response ? error.response.status : 'No response from API')
+            } finally {
+                setWaiting(false)
+            }
         }
     }
 
@@ -43,12 +57,14 @@ const Chat = ({local, setData}) => {
                     <input name="user" placeholder="user"/>
                     <input type="submit" value="chat"/>
                 </form>
-                {local.chat.map(c => <span onClick={() => setCurrentChat(c.user)} key={c.user} className={c.user===currentChat ? 'current' : ''}>{c.user}</span>)}
+                {local.chat.map(c => <span onClick={() => readChatHandle(c.user)} key={c.user} className={`${c.user===currentChat ? 'current ' : ''}${local.unread[c.user] ? 'unread' : ''}`}>
+                    {c.user}{local.unread[c.user] ? <span className="unread-number">{local.unread[c.user]}</span> : ''}
+                </span>)}
             </div>
             {
                 currentChat.length ?
                     <div className="user">
-                        <p>{currentChat} <button onClick={() => setCurrentChat('')}>x</button></p>
+                        <p>{currentChat} <button onClick={() => readChatHandle('')}>x</button></p>
                         <ul>
                             {currentChatObject && [...currentChatObject.messages].reverse()
                                 .map((message, index) => <li key={index} className={message.username===local.username ? 'you' : ''}>

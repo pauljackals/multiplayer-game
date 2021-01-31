@@ -57,6 +57,8 @@ const INITIAL_STATE = {
         score: 0
     },
     chat: [],
+    currentChat: '',
+    unread: {},
     initialPosition: {
         row: -1,
         column: -1,

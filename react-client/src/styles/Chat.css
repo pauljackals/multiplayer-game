@@ -7,6 +7,10 @@
 .users span.current {
     background-color: lightsteelblue;
 }
+.users span.unread span {
+    background-color: red;
+    color: white;
+}
 .users {
     padding: 10px;
     width: fit-content;

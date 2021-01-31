@@ -21,7 +21,9 @@ const {
     removeTopicsAction,
     resetLocalAction,
     decrementActionsLocalAction,
-    addPointsLocalAction
+    addPointsLocalAction,
+    setUnreadAction,
+    setCurrentChatAction
 } = require('../tanks-game/actions/actionsLocal')
 const {
     addUserAction,
@@ -53,7 +55,9 @@ const getDataForPublish = user => ({
     chat: undefined,
     initialPosition: undefined,
     cancelUser: undefined,
-    topics: undefined
+    topics: undefined,
+    currentChat: undefined,
+    unread: undefined
 })
 
 const storeWithUser = (store, currentUser) => {
@@ -306,6 +310,10 @@ const messageLogic = async (client, store, topic, message) => {
             const messageUser = topicSplit[3]
             const messageJson = JSON.parse(message)
             storeLoaded.dispatch(addChatMessageAction(messageUser, messageJson.message, messageUser))
+            if(local.currentChat!==messageUser) {
+                const previousNumber = local.unread[messageUser]
+                storeLoaded.dispatch(setUnreadAction(messageUser, previousNumber ? previousNumber+1 : 1))
+            }
         }
     })
     return true
@@ -623,6 +631,13 @@ const shoot = (client, storeLoaded) => {
     }
 }
 
+const readChat = (storeLoaded, user) => {
+    storeLoaded.dispatch(setCurrentChatAction(user))
+    if(user.length) {
+        storeLoaded.dispatch(setUnreadAction(user, 0))
+    }
+}
+
 module.exports= {
     messageLogic,
     storeWithUser,
@@ -638,5 +653,6 @@ module.exports= {
     cancel,
     canAct,
     move,
-    shoot
+    shoot,
+    readChat
 }

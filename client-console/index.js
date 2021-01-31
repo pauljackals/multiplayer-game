@@ -2,9 +2,6 @@ require('dotenv').config()
 const readline = require('readline')
 const mqtt = require('mqtt')
 const {
-    setCurrentChatAction,
-    removeChatNotificationAction,
-    addChatNotificationAction,
     setHelpAction,
     setCurrentUserAction
 } = require('./actions/actionsExtra')
@@ -45,7 +42,8 @@ const {
     cancel,
     canAct,
     move,
-    shoot
+    shoot,
+    readChat
 } = require('../tanks-game/functions')
 const {
     topicChatPrefix
@@ -79,19 +77,7 @@ client.on('message', async (topic, message) => {
 
     await messageLogic(client, store, topic, message)
 
-    const topicSplit = topic.split('/')
-    const extra = store.getState().reducerExtra
-    const messageUser = topicSplit[3]
-    const renderWithStoreLoaded = renderWithStore(extra.currentUser)
-
-    if (topicSplit[1]==='chat' && extra.currentChat!==messageUser) {
-        const remove = () => store.dispatch(removeChatNotificationAction(messageUser))
-        remove()
-        store.dispatch(addChatNotificationAction(messageUser, setTimeout(() => {
-            remove()
-            renderWithStoreLoaded()
-        }, 5000)))
-    }
+    const renderWithStoreLoaded = renderWithStore(store.getState().reducerExtra.currentUser)
     renderWithStoreLoaded()
 })
 
@@ -128,17 +114,16 @@ rl.on('line', async input => {
     if(/^\/chat \w+$/.test(input)){
         const target = input.split(' ')[1]
         if(target!==username) {
-            storeLoaded.dispatch(setCurrentChatAction(target))
-            storeLoaded.dispatch(removeChatNotificationAction(target))
+            readChat(storeLoaded, target)
         }
         renderWithStoreLoaded()
         return
-    } else if (extra.currentChat.length) {
+    } else if (local.currentChat.length) {
         if (input === '/exit') {
-            storeLoaded.dispatch(setCurrentChatAction(''))
+            readChat(storeLoaded, '')
 
         } else if (input.length && input[0] !== '/') {
-            sendChat(client, storeLoaded, extra.currentChat, input, username)
+            sendChat(client, storeLoaded, local.currentChat, input, username)
         }
         renderWithStoreLoaded()
         return

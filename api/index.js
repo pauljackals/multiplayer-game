@@ -41,7 +41,8 @@ const {
     cancel,
     canAct,
     move,
-    shoot
+    shoot,
+    readChat
 } = require('../tanks-game/functions')
 
 client.on('message',  async (topic, message) => {
@@ -202,4 +203,14 @@ app.patch('/:username/shoot', (req, res) => {
     } else {
         return res.status(409).json({})
     }
+})
+app.patch('/:username/read', (req, res) => {
+    const username = req.params.username
+    const target = req.body.user
+    if(typeof target !== 'string' || !/^\w*$/.test(target)) {
+        return res.status(422).json({})
+    }
+    const storeLoaded = storeWithUser(store, username)
+    readChat(storeLoaded, target)
+    return res.json(storeLoaded.getState())
 })
