@@ -27,9 +27,11 @@ client.on('error', () => {
 const store = require('../tanks-game/store')()
 
 const {
+    removeNameCheck
+} = require('../tanks-game/actions/actionsNameCheck')
+const {
     storeWithUser,
     messageLogic,
-    createUser,
     sendChat,
     joinRoom,
     leaveRoom,
@@ -42,7 +44,8 @@ const {
     canAct,
     move,
     shoot,
-    readChat
+    readChat,
+    checkName
 } = require('../tanks-game/functions')
 
 client.on('message',  async (topic, message) => {
@@ -56,13 +59,26 @@ app.get('/:username', (req, res) => {
     return res.status(status).json(state)
 })
 
-app.post('/', (req, res) => {
+app.post('/', async (req, res) => {
     const username = req.body.username
     if(typeof username !== 'string' || !/^\w+$/.test(username)) {
-        return res.status(422).json({})
+        return res.status(422).json({message: 'Name can only contain letters, numbers and _'})
     }
-    createUser(client, store, username)
-    return res.status(201).json(storeWithUser(store, username).getState())
+    // createUser(client, store, username)
+    // return res.status(201).json(storeWithUser(store, username).getState())
+    const id = checkName(client, store, username)
+    const interval = setInterval(() => {
+        const nameCheck = store.getState().reducerNameCheck[id]
+        if(nameCheck && nameCheck.finished) {
+            clearInterval(interval)
+            store.dispatch(removeNameCheck(id))
+            if(nameCheck.free) {
+                res.status(201).json(storeWithUser(store, username).getState())
+            } else {
+                res.status(409).json({message: 'Name already in use'})
+            }
+        }
+    }, 10)
 })
 
 app.post('/:username/chat', (req, res) => {

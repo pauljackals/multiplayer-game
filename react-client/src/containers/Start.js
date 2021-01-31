@@ -6,9 +6,11 @@ import {
 
 const Start = ({setData}) => {
     const [waiting, setWaiting] = useState(false)
+    const [error, setError] = useState('')
 
     const submitHandle = async event => {
         event.preventDefault()
+        setError('')
         const username = event.target.username.value
         if(username.length && !waiting) {
             setWaiting(true)
@@ -24,6 +26,9 @@ const Start = ({setData}) => {
                 setData(response.data)
             } catch (error) {
                 console.log(error.response ? error.response.status : 'No response from API')
+                if(error.response && error.response.data.message) {
+                    setError(error.response.data.message)
+                }
                 setWaiting(false)
             }
         }
@@ -31,7 +36,8 @@ const Start = ({setData}) => {
 
     return (
         <div className="Start">
-            <form onSubmit={submitHandle}>
+            {error.length ? <div className="error">{error}</div> : ''}
+            <form onSubmit={submitHandle} onBlur={() => setError('')}>
                 <input name="username" placeholder="username"/>
                 <input type="submit" value="start"/>
             </form>

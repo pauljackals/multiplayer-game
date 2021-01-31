@@ -2,6 +2,9 @@ require('dotenv').config()
 const readline = require('readline')
 const mqtt = require('mqtt')
 const {
+    removeNameCheck
+} = require('../tanks-game/actions/actionsNameCheck')
+const {
     setHelpAction,
     setCurrentUserAction
 } = require('./actions/actionsExtra')
@@ -30,7 +33,6 @@ const {render} = require('./functions')
 const {
     storeWithUser,
     messageLogic,
-    createUser,
     sendChat,
     joinRoom,
     leaveRoom,
@@ -43,7 +45,8 @@ const {
     canAct,
     move,
     shoot,
-    readChat
+    readChat,
+    checkName
 } = require('../tanks-game/functions')
 const {
     topicChatPrefix
@@ -60,9 +63,22 @@ const start = async () => {
     console.log()
     const username = await askQuestion("Type your username: ")
     if(/^\w+$/.test(username)) {
-        store.dispatch(setCurrentUserAction(username))
-        createUser(client, store, username)
-        renderWithStore(username)()
+        console.clear()
+        console.log('*Checking name availability*')
+        const id = checkName(client, store, username)
+        const interval = setInterval(() => {
+            const nameCheck = store.getState().reducerNameCheck[id]
+            if(nameCheck && nameCheck.finished) {
+                clearInterval(interval)
+                store.dispatch(removeNameCheck(id))
+                if(nameCheck.free) {
+                    store.dispatch(setCurrentUserAction(username))
+                    renderWithStore(username)()
+                } else {
+                    start()
+                }
+            }
+        }, 10)
     } else {
         start()
     }
@@ -77,8 +93,10 @@ client.on('message', async (topic, message) => {
 
     await messageLogic(client, store, topic, message)
 
-    const renderWithStoreLoaded = renderWithStore(store.getState().reducerExtra.currentUser)
-    renderWithStoreLoaded()
+    if(topic.split('/')[1]!=='name') {
+        const renderWithStoreLoaded = renderWithStore(store.getState().reducerExtra.currentUser)
+        renderWithStoreLoaded()
+    }
 })
 
 rl.on('line', async input => {

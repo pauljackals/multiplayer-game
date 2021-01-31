@@ -4,6 +4,7 @@ import {
 } from "../actions/actionsData";
 import Start from "./Start";
 import Game from "./Game";
+import '../styles/App.css'
 
 const App = ({data, setData}) => {
   return (

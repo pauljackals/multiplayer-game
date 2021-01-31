@@ -1,3 +1,4 @@
+const {v4: uuid} = require('uuid');
 const {
     addMessageAction,
     setPlayingLocalAction,
@@ -24,7 +25,7 @@ const {
     addPointsLocalAction,
     setUnreadAction,
     setCurrentChatAction
-} = require('../tanks-game/actions/actionsLocal')
+} = require('./actions/actionsLocal')
 const {
     addUserAction,
     removeUserAction,
@@ -41,10 +42,15 @@ const {
     setVoteOnlineAction,
     setCancelOnlineAction,
     resetOnlineAction
-} = require('../tanks-game/actions/actionsOnline')
+} = require('./actions/actionsOnline')
+const {
+    startNameCheck,
+    clearNameCheck
+} = require('./actions/actionsNameCheck')
 const {
     topicRoomPrefix,
-    topicChatPrefix
+    topicChatPrefix,
+    topicNamePrefix
 } = require('./prefixes')
 
 const getDataForPublish = user => ({
@@ -77,6 +83,14 @@ const storeWithUser = (store, currentUser) => {
 }
 const messageLogic = async (client, store, topic, message) => {
 
+    const topicSplit = topic.split('/')
+
+    if(topicSplit[1]==='name' && topicSplit[4]==='response'){
+        client.unsubscribe(topic)
+        store.dispatch(clearNameCheck(topicSplit[3], false))
+        return true
+    }
+
     const subscribers = Object.values(store.getState().reducerLocal)
         .filter(subscriber => subscriber.topics.find(t => {
             const string = t.replace(/\//g, '\\/').replace(/\+/g, '\\w+').replace(/#/g, '\\w+(\\/?\\w+)*')
@@ -92,7 +106,6 @@ const messageLogic = async (client, store, topic, message) => {
         const local = state.reducerLocal
         const online = state.reducerOnline
         const localUsername = local.username
-        const topicSplit = topic.split('/')
 
         const stopVoting = messageUser => {
             storeLoaded.dispatch(setCancelUserAction(''))
@@ -116,7 +129,10 @@ const messageLogic = async (client, store, topic, message) => {
             }
         }
 
-        if(topicSplit[1]==='room') {
+        if(topicSplit[1]==='name' && topicSplit[4]==='request') {
+            client.publish(`${topicNamePrefix}/${localUsername}/${topicSplit[3]}/response`, '{}')
+
+        } else if(topicSplit[1]==='room') {
             const topicType = topicSplit[2]
             const messageUser = topicSplit[4]
             const notUserEcho = messageUser!==localUsername
@@ -332,9 +348,9 @@ const endTurn = (client, storeLoaded) => {
 const createUser = (client, store, username) => {
     store.dispatch(setUsernameAction(username))
     const storeLoaded = storeWithUser(store, username)
-    const topic = `${topicChatPrefix}/${username}/#`
-    client.subscribe(topic)
-    storeLoaded.dispatch(addTopicsAction([topic]))
+    const topics = [`${topicChatPrefix}/${username}/#`, `${topicNamePrefix}/${username}/+/request`]
+    client.subscribe(topics)
+    storeLoaded.dispatch(addTopicsAction(topics))
 }
 const sendChat = (client, storeLoaded, target, message, sender) => {
     const username = storeLoaded.getState().reducerLocal.username
@@ -638,6 +654,23 @@ const readChat = (storeLoaded, user) => {
     }
 }
 
+const checkName = (client, store, username) => {
+    const id = uuid().replace(/-/g, '_')
+    client.subscribe(`${topicNamePrefix}/${username}/${id}/response`)
+    store.dispatch(startNameCheck(
+        setInterval(() => {
+            client.publish(`${topicNamePrefix}/${username}/${id}/request`, '{}')
+        }, 10),
+        setTimeout(() => {
+            client.unsubscribe(`${topicNamePrefix}/${username}/${id}/response`)
+            createUser(client, store, username)
+            store.dispatch(clearNameCheck(id, true))
+        }, 1000),
+        id
+    ))
+    return id
+}
+
 module.exports= {
     messageLogic,
     storeWithUser,
@@ -654,5 +687,6 @@ module.exports= {
     canAct,
     move,
     shoot,
-    readChat
+    readChat,
+    checkName
 }
