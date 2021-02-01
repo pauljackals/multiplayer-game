@@ -106,7 +106,7 @@ app.post('/', async (req, res) => {
             if(nameCheck.free) {
                 const token = id.replace(/_/g, '-')
                 store.dispatch(addTokenAction(username, token))
-                console.log(`${username}: ${token}`)
+                console.log(`[INFO] ${username}: ${token}`)
                 const storeLoaded = storeWithUser(store, username)
                 res.status(201).json({data: getLocalOnline(storeLoaded), token})
             } else {
