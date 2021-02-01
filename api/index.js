@@ -68,16 +68,24 @@ const checkToken = req => {
     return 401
 }
 
+const getLocalOnline = storeLoaded => {
+    const data = storeLoaded.getState()
+    return {
+        reducerLocal: data.reducerLocal,
+        reducerOnline: data.reducerOnline
+    }
+}
+
 app.get('/:username', (req, res) => {
     const username = req.params.username
-    const state = storeWithUser(store, username).getState()
-    const status = Object.values(state).includes(undefined) ? 404 : 200
+    const storeLoaded = storeWithUser(store, username)
+    const status = Object.values(getLocalOnline(storeLoaded)).includes(undefined) ? 404 : 200
     if(status===404) {
         return res.status(status).json({})
     } else {
         const result = checkToken(req)
         if(result===200) {
-            return res.status(result).json(state)
+            return res.status(result).json(getLocalOnline(storeLoaded))
         } else {
             return res.status(result).json({})
         }
@@ -99,8 +107,8 @@ app.post('/', async (req, res) => {
                 const token = id.replace(/_/g, '-')
                 store.dispatch(addTokenAction(username, token))
                 console.log(`${username}: ${token}`)
-                const data = storeWithUser(store, username).getState()
-                res.status(201).json({data: {reducerLocal: data.reducerLocal, reducerOnline: data.reducerOnline}, token})
+                const storeLoaded = storeWithUser(store, username)
+                res.status(201).json({data: getLocalOnline(storeLoaded), token})
             } else {
                 res.status(409).json({message: 'Name already in use'})
             }
@@ -127,7 +135,7 @@ app.post('/:username/chat', (req, res) => {
     }
     const storeLoaded = storeWithUser(store, username)
     sendChat(client, storeLoaded, user, message, username)
-    return res.status(201).json(storeLoaded.getState())
+    return res.status(201).json(getLocalOnline(storeLoaded))
 })
 
 app.patch('/:username/join', (req, res) => {
@@ -141,7 +149,7 @@ app.patch('/:username/join', (req, res) => {
         return res.status(409).json({})
     }
     joinRoom(client, storeLoaded, store.getState().reducerLocal, room)
-    return res.json(storeLoaded.getState())
+    return res.json(getLocalOnline(storeLoaded))
 })
 
 app.patch('/:username/leave',  (req, res) => {
@@ -151,7 +159,7 @@ app.patch('/:username/leave',  (req, res) => {
         return res.status(409).json({})
     }
     leaveRoom(client, storeLoaded, store.getState().reducerLocal)
-    return res.json(storeLoaded.getState())
+    return res.json(getLocalOnline(storeLoaded))
 })
 
 app.post('/:username/message', (req, res) => {
@@ -166,7 +174,7 @@ app.post('/:username/message', (req, res) => {
         return res.status(409).json({})
     }
     sendRoomMessage(client, storeLoaded, message)
-    return res.status(201).json(storeLoaded.getState())
+    return res.status(201).json(getLocalOnline(storeLoaded))
 })
 
 app.patch('/:username/play',(req, res) => {
@@ -177,7 +185,7 @@ app.patch('/:username/play',(req, res) => {
     const online = state.reducerOnline
     if(!local.playing && (!online.length || !online.find(o => o.turn)) && !local.winner.username.length){
         play(client, storeLoaded)
-        return res.json(storeLoaded.getState())
+        return res.json(getLocalOnline(storeLoaded))
     } else {
         return res.status(409).json({})
     }
@@ -191,7 +199,7 @@ app.patch('/:username/ready',(req, res) => {
     const online = state.reducerOnline
     if(local.playing && !local.ready && online.filter(o => o.playing).length) {
         ready(client, storeLoaded)
-        return res.json(storeLoaded.getState())
+        return res.json(getLocalOnline(storeLoaded))
     } else {
         return res.status(409).json({})
     }
@@ -202,7 +210,7 @@ app.patch('/:username/end', (req, res) => {
     const storeLoaded = storeWithUser(store, username)
     if(storeLoaded.getState().reducerLocal.turn) {
         endPlayerTurn(client, storeLoaded)
-        return res.json(storeLoaded.getState())
+        return res.json(getLocalOnline(storeLoaded))
     } else {
         return res.status(409).json({})
     }
@@ -217,7 +225,7 @@ app.patch('/:username/vote', (req, res) => {
     const local = storeLoaded.getState().reducerLocal
     if(local.playing && local.cancelUser.length && local.cancelUser!==username && !local.vote){
         vote(client, storeLoaded, agree)
-        return res.json(storeLoaded.getState())
+        return res.json(getLocalOnline(storeLoaded))
     } else {
         return res.status(409).json({})
     }
@@ -228,7 +236,7 @@ app.patch('/:username/cancel', (req, res) => {
     const local = storeLoaded.getState().reducerLocal
     if(canAct(storeLoaded) && local.tank.actions<3 && !local.cancelUser.length) {
         cancel(client, storeLoaded)
-        return res.json(storeLoaded.getState())
+        return res.json(getLocalOnline(storeLoaded))
     } else {
         return res.status(409).json({})
     }
@@ -241,7 +249,7 @@ app.patch('/:username/move', (req, res) => {
     }
     const storeLoaded = storeWithUser(store, username)
     if(canAct(storeLoaded) && move(client, storeLoaded, moveType)) {
-        return res.json(storeLoaded.getState())
+        return res.json(getLocalOnline(storeLoaded))
     } else {
         return res.status(409).json({})
     }
@@ -251,7 +259,7 @@ app.patch('/:username/shoot', (req, res) => {
     const storeLoaded = storeWithUser(store, username)
     if(canAct(storeLoaded)){
         shoot(client, storeLoaded)
-        return res.json(storeLoaded.getState())
+        return res.json(getLocalOnline(storeLoaded))
     } else {
         return res.status(409).json({})
     }
@@ -264,5 +272,5 @@ app.patch('/:username/read', (req, res) => {
     }
     const storeLoaded = storeWithUser(store, username)
     readChat(storeLoaded, target)
-    return res.json(storeLoaded.getState())
+    return res.json(getLocalOnline(storeLoaded))
 })
