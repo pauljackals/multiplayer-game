@@ -8,7 +8,7 @@ import Chat from "./Chat";
 import Room from "./Room";
 import '../styles/Game.css'
 
-const Game = ({data, setData, token}) => {
+const Game = ({data, setData, token, setTokenNotification, tokenNotification}) => {
     const local = data.reducerLocal
 
     const [showToken, setShowToken] = useState(false)
@@ -30,11 +30,20 @@ const Game = ({data, setData, token}) => {
     return (
         <div className="Game">
             {
+                tokenNotification ?
+                    <div className="warning info">This is the token required for later login. Don't lose it :)</div> : ''
+            }
+            {
                 !showToken ?
                     <button onClick={() => setShowToken(true)}>show token</button> :
                     <>
                         <span className="token">{token}</span>
-                        <button onClick={() => setShowToken(false)}>hide</button>
+                        <button onClick={() => {
+                            setShowToken(false)
+                            if(tokenNotification){
+                                setTokenNotification(false)
+                            }
+                        }}>hide</button>
                     </>
             }
             <h3>User: {local.username}</h3>

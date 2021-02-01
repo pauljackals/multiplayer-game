@@ -5,7 +5,7 @@ import {
     getHeaders
 } from "../functions";
 
-const Start = ({setData, setToken}) => {
+const Start = ({setData, setToken, setTokenNotification}) => {
     const [waiting, setWaiting] = useState(false)
     const [error, setError] = useState('')
     const [info, setInfo] = useState('')
@@ -47,6 +47,7 @@ const Start = ({setData, setToken}) => {
                 const response = await axios.post(getApiUrl('/'), {username})
                 const responseData = response.data
                 setToken(responseData.token)
+                setTokenNotification(true)
                 setData(responseData.data)
             } catch (error) {
                 setInfo('')

@@ -99,7 +99,8 @@ app.post('/', async (req, res) => {
                 const token = id.replace(/_/g, '-')
                 store.dispatch(addTokenAction(username, token))
                 console.log(`${username}: ${token}`)
-                res.status(201).json({data: storeWithUser(store, username).getState(), token})
+                const data = storeWithUser(store, username).getState()
+                res.status(201).json({data: {reducerLocal: data.reducerLocal, reducerOnline: data.reducerOnline}, token})
             } else {
                 res.status(409).json({message: 'Name already in use'})
             }

@@ -45,11 +45,12 @@
     align-items: center;
     justify-content: center;
     background-color: darkgrey;
+    position: relative;
 }
 .field.line-of-sight {
     background-color: lightgreen;
 }
-.field.you {
+.field.current {
     background-color: white;
 }
 .board {
@@ -64,6 +65,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
+    border: 1px solid black;
 }
 .tank.rotation-1 {
     transform: rotate(90deg);
@@ -86,6 +88,7 @@
     height: 18px;
     background-color: darkred;
     margin-top: -4px;
+    border: 1px solid black;
 }
 .field.you .cannon {
     background-color: darkgreen;
@@ -129,4 +132,17 @@
     display: block;
     margin-right: auto;
     margin-left: auto;
+}
+.tank-name {
+    position: absolute;
+    top: -15px;
+    background-color: black;
+    color: white;
+    padding: 2px;
+    z-index: 5;
+    opacity: 1;
+    display: none;
+}
+.tank:hover + .tank-name {
+    display: initial;
 }

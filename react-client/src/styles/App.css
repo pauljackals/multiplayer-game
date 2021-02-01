@@ -1,6 +1,7 @@
 .warning {
     width: fit-content;
     padding: 2px;
+    margin-bottom: 5px;
 }
 .error {
     background-color: red;

@@ -28,6 +28,8 @@ const Room = ({data, setData, token}) => {
     }
     const playingSorted = playingFirst ? sortLinkedPlayers(playingFirst, []) : []
 
+    const currentTurnPlayer = playingSorted.find(p => p.turn)
+
     const joinRoomHandle = async event => {
         event.preventDefault()
         if(!waiting) {
@@ -222,8 +224,8 @@ const Room = ({data, setData, token}) => {
                                         <div className="board">
                                             {local.board.map((row, indexRow) =>
                                                 row.map((field, indexColumn) =>
-                                                    <div key={`${indexRow}-${indexColumn}`} className={`field${field.tank===local.username ? ' you' : ''}${local.turn && local.tank.actions && local.tank.health && isLineOfSight(indexRow, indexColumn) ? ' line-of-sight' : ''}`}>
-                                                        {field.tank.length ? tankElement(playing.find(user => user.username===field.tank)) : ''}
+                                                    <div key={`${indexRow}-${indexColumn}`} className={`field${currentTurnPlayer && currentTurnPlayer.username===field.tank ? ' current' : ''}${field.tank===local.username ? ' you' : ''}${local.turn && local.tank.actions && local.tank.health && isLineOfSight(indexRow, indexColumn) ? ' line-of-sight' : ''}`}>
+                                                        {field.tank.length ? <>{tankElement(playing.find(user => user.username===field.tank))}<span className="tank-name">{field.tank}</span></> : ''}
                                                     </div>
                                                 )
                                             )}
