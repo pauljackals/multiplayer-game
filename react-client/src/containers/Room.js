@@ -1,9 +1,12 @@
 import axios from "axios";
-import {getApiUrl} from "../functions";
+import {
+    getApiUrl,
+    getHeaders
+} from "../functions";
 import {useState} from "react";
 import '../styles/Room.css'
 
-const Room = ({data, setData}) => {
+const Room = ({data, setData, token}) => {
 
     const [waiting, setWaiting] = useState(false)
 
@@ -32,7 +35,7 @@ const Room = ({data, setData}) => {
             const room = event.target.room.value
             event.target.reset()
             try {
-                const response = await axios.patch(getApiUrl(`/${local.username}/join`), {room})
+                const response = await axios.patch(getApiUrl(`/${local.username}/join`), {room}, getHeaders(token))
                 setData(response.data)
             } catch (error) {
                 console.log(error.response ? error.response.status : 'No response from API')
@@ -45,7 +48,7 @@ const Room = ({data, setData}) => {
         if(!waiting) {
             setWaiting(true)
             try {
-                const response = await axios.patch(getApiUrl(`/${local.username}/${endpoint}`))
+                const response = await axios.patch(getApiUrl(`/${local.username}/${endpoint}`), {}, getHeaders(token))
                 setData(response.data)
             } catch (error) {
                 console.log(error.response ? error.response.status : 'No response from API')
@@ -93,7 +96,7 @@ const Room = ({data, setData}) => {
             setWaiting(true)
             event.target.reset()
             try {
-                const response = await axios.post(getApiUrl(`/${local.username}/message`), {message})
+                const response = await axios.post(getApiUrl(`/${local.username}/message`), {message}, getHeaders(token))
                 setData(response.data)
             } catch (error) {
                 console.log(error.response ? error.response.status : 'No response from API')
@@ -108,7 +111,7 @@ const Room = ({data, setData}) => {
         if(!waiting) {
             setWaiting(true)
             try {
-                const response = await axios.patch(getApiUrl(`/${local.username}/vote`), {agree})
+                const response = await axios.patch(getApiUrl(`/${local.username}/vote`), {agree}, getHeaders(token))
                 setData(response.data)
             } catch (error) {
                 console.log(error.response ? error.response.status : 'No response from API')
@@ -122,7 +125,7 @@ const Room = ({data, setData}) => {
         if(!waiting) {
             setWaiting(true)
             try {
-                const response = await axios.patch(getApiUrl(`/${local.username}/move`), {move})
+                const response = await axios.patch(getApiUrl(`/${local.username}/move`), {move}, getHeaders(token))
                 setData(response.data)
             } catch (error) {
                 console.log(error.response ? error.response.status : 'No response from API')
@@ -154,6 +157,7 @@ const Room = ({data, setData}) => {
             {
                 !local.room.length ?
                     <form onSubmit={joinRoomHandle}>
+                        <h3>Room</h3>
                         <input placeholder="room" name="room"/>
                         <input type="submit" value="join"/>
                     </form> :

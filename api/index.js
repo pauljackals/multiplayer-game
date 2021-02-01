@@ -24,8 +24,12 @@ client.on('error', () => {
     process.exit(1)
 })
 
-const store = require('../tanks-game/store')()
+const reducerExtra = require('./reducers/reducerExtra')
+const store = require('../tanks-game/store')({reducerExtra})
 
+const {
+    addTokenAction
+} = require('./actions/actionsExtra')
 const {
     removeNameCheck
 } = require('../tanks-game/actions/actionsNameCheck')
@@ -52,11 +56,32 @@ client.on('message',  async (topic, message) => {
     await messageLogic(client, store, topic, message)
 })
 
+const checkToken = req => {
+    const authorization = req.headers.authorization
+    if (typeof authorization ==='string') {
+        const token = req.headers.authorization.replace(/^Bearer /, '')
+        if(store.getState().reducerExtra[req.path.split('/')[1]]===token) {
+            return 200
+        }
+        return 403
+    }
+    return 401
+}
+
 app.get('/:username', (req, res) => {
     const username = req.params.username
     const state = storeWithUser(store, username).getState()
     const status = Object.values(state).includes(undefined) ? 404 : 200
-    return res.status(status).json(state)
+    if(status===404) {
+        return res.status(status).json({})
+    } else {
+        const result = checkToken(req)
+        if(result===200) {
+            return res.status(result).json(state)
+        } else {
+            return res.status(result).json({})
+        }
+    }
 })
 
 app.post('/', async (req, res) => {
@@ -64,8 +89,6 @@ app.post('/', async (req, res) => {
     if(typeof username !== 'string' || !/^\w+$/.test(username)) {
         return res.status(422).json({message: 'Name can only contain letters, numbers and _'})
     }
-    // createUser(client, store, username)
-    // return res.status(201).json(storeWithUser(store, username).getState())
     const id = checkName(client, store, username)
     const interval = setInterval(() => {
         const nameCheck = store.getState().reducerNameCheck[id]
@@ -73,12 +96,24 @@ app.post('/', async (req, res) => {
             clearInterval(interval)
             store.dispatch(removeNameCheck(id))
             if(nameCheck.free) {
-                res.status(201).json(storeWithUser(store, username).getState())
+                const token = id.replace(/_/g, '-')
+                store.dispatch(addTokenAction(username, token))
+                console.log(`${username}: ${token}`)
+                res.status(201).json({data: storeWithUser(store, username).getState(), token})
             } else {
                 res.status(409).json({message: 'Name already in use'})
             }
         }
     }, 10)
+})
+
+app.use((req, res, next) => {
+    const result = checkToken(req)
+    if(result === 200) {
+        return next()
+    } else {
+        return res.status(result).json({})
+    }
 })
 
 app.post('/:username/chat', (req, res) => {

@@ -1,6 +1,12 @@
+.warning {
+    width: fit-content;
+    padding: 2px;
+}
 .error {
     background-color: red;
     color: white;
-    width: fit-content;
-    padding: 2px;
+}
+.info {
+    background-color: lightsteelblue;
+    color: black;
 }

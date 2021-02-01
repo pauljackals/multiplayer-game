@@ -1,9 +1,12 @@
 import {useState} from 'react'
 import '../styles/Chat.css'
 import axios from "axios";
-import {getApiUrl} from "../functions";
+import {
+    getApiUrl,
+    getHeaders
+} from "../functions";
 
-const Chat = ({local, setData}) => {
+const Chat = ({local, setData, token}) => {
     const [waiting, setWaiting] = useState(false)
     const currentChat = local.currentChat
 
@@ -14,7 +17,7 @@ const Chat = ({local, setData}) => {
             setWaiting(true)
             event.target.reset()
             try {
-                const response = await axios.post(getApiUrl(`/${local.username}/chat`), {user: currentChat, message})
+                const response = await axios.post(getApiUrl(`/${local.username}/chat`), {user: currentChat, message}, getHeaders(token))
                 setData(response.data)
             } catch (error) {
                 console.log(error.response ? error.response.status : 'No response from API')
@@ -37,7 +40,7 @@ const Chat = ({local, setData}) => {
         if(!waiting) {
             setWaiting(true)
             try {
-                const response = await axios.patch(getApiUrl(`/${local.username}/read`), {user})
+                const response = await axios.patch(getApiUrl(`/${local.username}/read`), {user}, getHeaders(token))
                 setData(response.data)
             } catch (error) {
                 console.log(error.response ? error.response.status : 'No response from API')

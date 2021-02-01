@@ -4,8 +4,9 @@ import App from './containers/App';
 import {createStore, combineReducers} from "redux";
 import {Provider} from 'react-redux'
 import reducerData from "./reducers/reducerData";
+import reducerToken from "./reducers/reducerToken";
 
-const store = createStore(combineReducers({reducerData}))
+const store = createStore(combineReducers({reducerData, reducerToken}))
 
 const render = () => ReactDOM.render(
   <React.StrictMode>
